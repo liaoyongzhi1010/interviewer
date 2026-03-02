@@ -45,8 +45,16 @@
                             <label class="text-muted mb-1" style="font-size: 0.9rem;">文件名</label>
                             <p class="mb-0 fw-bold">
                                 <i class="fas fa-file-pdf me-2" style="color: #ef4444;"></i>
-                                {{ resume.file_name or '未知' }}
+                                {% set display_file_name = resume.name or resume.file_name or '未知' %}
+                                {% if display_file_name != '未知' and not display_file_name.lower().endswith('.pdf') %}
+                                {{ display_file_name }}.pdf
+                                {% else %}
+                                {{ display_file_name }}
+                                {% endif %}
                             </p>
+                            {% if resume.file_name and resume.file_name != resume.name %}
+                            <small class="text-muted d-block mt-1">原始上传文件：{{ resume.file_name }}</small>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="text-muted mb-1" style="font-size: 0.9rem;">文件大小</label>
@@ -63,11 +71,23 @@
                             </p>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="text-muted mb-1" style="font-size: 0.9rem;">状态</label>
+                            <label class="text-muted mb-1" style="font-size: 0.9rem;">解析状态</label>
                             <p class="mb-0 fw-bold">
-                                <i class="fas fa-circle me-2" style="color: var(--accent-green); font-size: 0.6rem;"></i>
-                                激活
+                                {% set parse_status = resume.parse_status or 'pending' %}
+                                {% if parse_status == 'parsed' %}
+                                <i class="fas fa-circle-check me-2 text-success"></i>
+                                <span class="badge rounded-pill text-bg-success">{{ resume.parse_status_display or '解析成功' }}</span>
+                                {% elif parse_status == 'failed' %}
+                                <i class="fas fa-circle-xmark me-2 text-danger"></i>
+                                <span class="badge rounded-pill text-bg-danger">{{ resume.parse_status_display or '解析失败' }}</span>
+                                {% else %}
+                                <i class="fas fa-hourglass-half me-2 text-warning"></i>
+                                <span class="badge rounded-pill text-bg-warning">{{ resume.parse_status_display or '解析中' }}</span>
+                                {% endif %}
                             </p>
+                            {% if resume.parse_status == 'failed' and resume.parse_error %}
+                            <small class="text-danger d-block mt-2">{{ resume.parse_error }}</small>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -75,23 +95,29 @@
         </div>
     </div>
 
-    <!-- 简历内容 -->
+    <!-- 原始PDF -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-file-text me-2" style="color: var(--accent-green);"></i>
-                        简历内容
+                        <i class="fas fa-file-pdf me-2" style="color: #ef4444;"></i>
+                        原始PDF预览
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if resume_data and resume_data.get('markdown_content') %}
-                    <div class="resume-content" style="white-space: pre-wrap; font-family: monospace; background: #f8f9fa; padding: 1.5rem; border-radius: 8px; line-height: 1.6;">{{ resume_data.markdown_content }}</div>
+                    {% if pdf_url %}
+                    <div class="d-flex justify-content-end mb-2">
+                        <a href="{{ pdf_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-up-right-from-square me-1"></i>新窗口打开
+                        </a>
+                    </div>
+                    <iframe src="{{ pdf_url }}" class="w-100" style="height: 920px; border: 1px solid #e2e8f0; border-radius: 10px;" loading="lazy"></iframe>
+                    <small class="text-muted d-block mt-2">预览链接有效期 24 小时，到期后刷新页面会重新生成。</small>
                     {% else %}
                     <div class="text-center py-5">
-                        <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
-                        <p class="text-muted">简历内容不可用</p>
+                        <i class="fas fa-file-circle-xmark fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
+                        <p class="text-muted mb-0">当前简历没有可用的原始 PDF（可能是历史数据）</p>
                     </div>
                     {% endif %}
                 </div>
@@ -99,41 +125,25 @@
         </div>
     </div>
 
-    <!-- 结构化数据（如果有） -->
-    {% if resume_data and resume_data.get('structured_data') %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-sitemap me-2" style="color: var(--accent-purple);"></i>
-                        结构化数据
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <pre class="mb-0" style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; overflow-x: auto;">{{ resume_data.structured_data | tojson(indent=2) }}</pre>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
 <!-- 删除确认模态框 -->
-<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+<div class="modal fade resume-action-modal resume-action-modal-danger" id="deleteConfirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header border-0">
+            <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2" style="color: #ef4444;"></i>
-                    确认删除
+                    <span class="resume-action-icon">
+                        <i class="fas fa-trash"></i>
+                    </span>
+                    删除简历
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-0">确定要删除这份简历吗？此操作不可恢复。</p>
+                <div class="resume-action-message" id="deleteResumeDetailText">确定要删除这份简历吗？此操作不可恢复。</div>
             </div>
-            <div class="modal-footer border-0">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>取消
                 </button>
@@ -146,33 +156,38 @@
 </div>
 
 <!-- 重命名模态框 -->
-<div class="modal fade" id="renameModal" tabindex="-1">
+<div class="modal fade resume-action-modal resume-action-modal-rename" id="renameModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header border-0">
+            <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-edit me-2" style="color: var(--accent-blue);"></i>
+                    <span class="resume-action-icon">
+                        <i class="fas fa-pen"></i>
+                    </span>
                     重命名简历
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="renameForm">
-                    <div class="mb-3">
+                    <div class="resume-action-field">
                         <label class="form-label">
                             <i class="fas fa-file-signature me-1"></i>
                             新名称 <span class="text-danger">*</span>
                         </label>
                         <input type="text" class="form-control" id="newResumeName" placeholder="请输入新的简历名称" required>
+                        <div class="resume-action-help">
+                            <i class="fas fa-lightbulb me-1"></i>建议使用“岗位_姓名”格式，后续检索更快
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-0">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>取消
                 </button>
                 <button type="button" class="btn btn-primary" id="confirmRenameBtn">
-                    <i class="fas fa-check me-1"></i>确认
+                    <i class="fas fa-check me-1"></i>保存名称
                 </button>
             </div>
         </div>
@@ -192,10 +207,6 @@
     padding: 1rem 1.5rem;
 }
 
-.resume-content {
-    max-height: 600px;
-    overflow-y: auto;
-}
 </style>
 {% endblock %}
 
@@ -206,25 +217,152 @@ $(document).ready(function() {
     const renameModal = new bootstrap.Modal(document.getElementById('renameModal'));
     const resumeId = '{{ resume.id }}';
     const resumeName = {{ resume.name | tojson | safe }};
+    let currentParseStatus = {{ (resume.parse_status or 'pending') | tojson | safe }};
+    let parseStatusPollTimer = null;
+    const PARSE_STATUS_POLL_INTERVAL_MS = 4000;
     const linkedRooms = {{ resume.linked_rooms | tojson | safe }} || [];
+
+    consumePendingRenameToast();
+    scheduleParseStatusPolling();
+
+    function showRenameSuccessToast(message) {
+        const safeTitle = $('<div>').text('重命名成功').html();
+        const safeMessage = $('<div>').text(message).html();
+        const toast = $(`
+            <div class="alert alert-dismissible fade show upload-toast upload-toast-success" role="alert">
+                <div class="d-flex align-items-start">
+                    <i class="fas fa-check-circle me-2 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <strong>${safeTitle}</strong>
+                        <p class="mb-0 mt-1">${safeMessage}</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        `);
+
+        $('body').append(toast);
+        const alertInstance = bootstrap.Alert.getOrCreateInstance(toast[0]);
+        setTimeout(function() {
+            alertInstance.close();
+        }, 2800);
+        toast.on('closed.bs.alert', function() {
+            $(this).remove();
+        });
+    }
+
+    function consumePendingRenameToast() {
+        const pendingRenameToast = sessionStorage.getItem('resume_rename_success_message');
+        if (!pendingRenameToast) {
+            return;
+        }
+        sessionStorage.removeItem('resume_rename_success_message');
+        showRenameSuccessToast(pendingRenameToast);
+    }
+
+    function showToast(type, message) {
+        if (window.YeyingInterviewer && window.YeyingInterviewer.showToast) {
+            window.YeyingInterviewer.showToast(type, message);
+            return;
+        }
+        console.log(`[${type}] ${message}`);
+    }
+
+    function escapeDeleteHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function buildDeleteResumeMessageHtml(name, rooms) {
+        const safeResumeName = escapeDeleteHtml(name || '该简历');
+        const linked = Array.isArray(rooms) ? rooms : [];
+        const roomListHtml = linked.map(function(room) {
+            const roomName = escapeDeleteHtml(String(room?.name || '未命名面试间').trim() || '未命名面试间');
+            const roomId = escapeDeleteHtml(String(room?.id || '--'));
+            return `
+                <li class="resume-delete-room-item">
+                    <span class="resume-delete-room-name">${roomName}</span>
+                    <code class="resume-delete-room-uuid">${roomId}</code>
+                </li>
+            `;
+        }).join('');
+
+        return `
+            <div class="resume-delete-summary">
+                <p class="resume-delete-title">确认删除「${safeResumeName}」？</p>
+                ${linked.length > 0 ? `
+                    <div class="resume-delete-risk">
+                        <i class="fas fa-link"></i>
+                        <span>将同步删除 ${linked.length} 个关联面试间</span>
+                    </div>
+                    <ul class="resume-delete-rooms">${roomListHtml}</ul>
+                ` : ''}
+                <p class="resume-delete-note">此操作不可恢复。</p>
+            </div>
+        `;
+    }
+
+    function shouldPollParseStatus(status) {
+        const normalized = String(status || '').toLowerCase();
+        return normalized === 'pending' || normalized === 'parsing';
+    }
+
+    function scheduleParseStatusPolling() {
+        if (parseStatusPollTimer) {
+            clearTimeout(parseStatusPollTimer);
+            parseStatusPollTimer = null;
+        }
+        if (!shouldPollParseStatus(currentParseStatus)) {
+            return;
+        }
+        parseStatusPollTimer = setTimeout(function() {
+            pollParseStatus();
+        }, PARSE_STATUS_POLL_INTERVAL_MS);
+    }
+
+    function pollParseStatus() {
+        $.ajax({
+            url: `/api/resumes/${resumeId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.code !== 200) {
+                    scheduleParseStatusPolling();
+                    return;
+                }
+                const latestStatus = String(response.data?.resume?.parse_status || '');
+                if (latestStatus !== currentParseStatus) {
+                    location.reload();
+                    return;
+                }
+                scheduleParseStatusPolling();
+            },
+            error: function() {
+                scheduleParseStatusPolling();
+            }
+        });
+    }
 
     // 重命名按钮点击
     $('#renameResumeBtn').on('click', function() {
+        if (!renameModal || typeof renameModal.show !== 'function') {
+            showToast('error', '重命名弹窗初始化失败，请刷新页面后重试');
+            return;
+        }
         $('#newResumeName').val(resumeName);
         renameModal.show();
     });
 
     // 删除按钮点击
     $('#deleteResumeBtn').on('click', function() {
-        let message = `确定要删除简历"${resumeName}"吗？`;
-        if (linkedRooms && linkedRooms.length > 0) {
-            message += `\n\n⚠️ 警告：该简历关联了 ${linkedRooms.length} 个面试间，删除简历将同时删除以下面试间：\n`;
-            linkedRooms.forEach((room, index) => {
-                message += `${index + 1}. ${room.id}: ${room.name}\n`;
-            });
+        if (!deleteModal || typeof deleteModal.show !== 'function') {
+            showToast('error', '删除弹窗初始化失败，请刷新页面后重试');
+            return;
         }
-        message += '\n此操作不可恢复。';
-        $('#deleteConfirmModal .modal-body p').html(message.replace(/\n/g, '<br>'));
+        $('#deleteResumeDetailText').html(buildDeleteResumeMessageHtml(resumeName, linkedRooms));
         deleteModal.show();
     });
 
@@ -232,58 +370,68 @@ $(document).ready(function() {
     $('#confirmRenameBtn').on('click', function() {
         const newName = $('#newResumeName').val().trim();
         if (!newName) {
-            alert('请输入新名称');
+            showToast('warning', '请输入新名称');
             return;
         }
 
-        renameModal.hide();
+        if (renameModal && typeof renameModal.hide === 'function') {
+            renameModal.hide();
+        }
 
         $.ajax({
             url: `/api/resumes/${resumeId}`,
             method: 'PUT',
             contentType: 'application/json',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
             data: JSON.stringify({
                 name: newName
             }),
             success: function(response) {
                 if (response.code === 200) {
+                    sessionStorage.setItem('resume_rename_success_message', `简历已重命名为《${newName}》`);
                     location.reload();
                 } else {
-                    alert('重命名失败：' + (response.message || '未知错误'));
+                    showToast('error', '重命名失败：' + (response.message || '未知错误'));
                 }
             },
             error: function(xhr) {
                 const response = xhr.responseJSON;
-                alert('重命名失败：' + (response?.message || '网络错误'));
+                showToast('error', '重命名失败：' + (response?.message || '网络错误'));
             }
         });
     });
 
     // 确认删除
     $('#confirmDeleteBtn').on('click', function() {
-        deleteModal.hide();
+        if (deleteModal && typeof deleteModal.hide === 'function') {
+            deleteModal.hide();
+        }
 
         $.ajax({
             url: `/api/resumes/${resumeId}`,
             method: 'DELETE',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
             success: function(response) {
                 if (response.code === 200) {
+                    const successMessage = resumeName
+                        ? `简历《${resumeName}》已删除`
+                        : '简历已删除';
+                    sessionStorage.setItem('resume_delete_success_message', successMessage);
                     window.location.href = '{{ url_for("room.resumes_list") }}';
                 } else {
-                    alert('删除失败：' + (response.message || '未知错误'));
+                    showToast('error', '删除失败：' + (response.message || '未知错误'));
                 }
             },
             error: function(xhr) {
                 const response = xhr.responseJSON;
-                alert('删除失败：' + (response?.message || '网络错误'));
+                showToast('error', '删除失败：' + (response?.message || '网络错误'));
             }
         });
+    });
+
+    $(window).on('beforeunload', function() {
+        if (parseStatusPollTimer) {
+            clearTimeout(parseStatusPollTimer);
+            parseStatusPollTimer = null;
+        }
     });
 });
 </script>
