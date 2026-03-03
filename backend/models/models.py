@@ -47,6 +47,8 @@ class Resume(BaseModel):
     company = CharField(null=True)  # 目标公司
     position = CharField(null=True)  # 目标职位
     status = CharField(default='active')  # active, deleted
+    parse_status = CharField(default='parsed')  # pending, parsing, parsed, failed
+    parse_error = TextField(null=True)  # 解析失败原因
 
     class Meta:
         table_name = 'resumes'
@@ -132,7 +134,38 @@ def create_tables() -> None:
     database.close()
 
 
+def migrate_resume_schema() -> None:
+    """迁移简历表结构（向后兼容已有数据库）"""
+    opened_here = False
+
+    if database.is_closed():
+        database.connect()
+        opened_here = True
+
+    try:
+        table_columns = {
+            row[1] for row in database.execute_sql("PRAGMA table_info(resumes)").fetchall()
+        }
+
+        if "parse_status" not in table_columns:
+            database.execute_sql(
+                "ALTER TABLE resumes ADD COLUMN parse_status VARCHAR(32) DEFAULT 'parsed'"
+            )
+            logger.info("Migrated resumes table: added parse_status column")
+
+        if "parse_error" not in table_columns:
+            database.execute_sql(
+                "ALTER TABLE resumes ADD COLUMN parse_error TEXT"
+            )
+            logger.info("Migrated resumes table: added parse_error column")
+
+    finally:
+        if opened_here and not database.is_closed():
+            database.close()
+
+
 def init_database() -> None:
     """初始化数据库"""
     create_tables()
+    migrate_resume_schema()
     logger.info("Database initialized successfully")

@@ -11,11 +11,6 @@ $(document).ready(function() {
 
     // 测试jQuery是否工作
     console.log('jQuery版本:', $.fn.jquery);
-
-    // 测试事件绑定
-    $('#test-btn').on('click', function() {
-        alert('jQuery工作正常！');
-    });
 });
 
 // 初始化页面
@@ -107,40 +102,52 @@ function bindGlobalEvents() {
     });
 }
 
-// 工具函数：显示Toast通知
-function showToast(type, message, duration = 3000) {
-    const types = {
-        'success': 'bg-success',
-        'error': 'bg-danger',
-        'warning': 'bg-warning',
-        'info': 'bg-info'
+function getToastMeta(type) {
+    const meta = {
+        success: { icon: 'fa-check-circle', className: 'upload-toast-success', title: '成功', duration: 3000 },
+        error: { icon: 'fa-circle-xmark', className: 'upload-toast-error', title: '操作失败', duration: 5000 },
+        warning: { icon: 'fa-triangle-exclamation', className: 'upload-toast-warning', title: '请注意', duration: 4000 },
+        info: { icon: 'fa-circle-info', className: 'upload-toast-info', title: '提示', duration: 3500 }
     };
-    
-    const bgClass = types[type] || 'bg-info';
-    
-    const toastHtml = `
-        <div class="toast position-fixed top-0 end-0 m-3" role="alert" style="z-index: 9999;">
-            <div class="toast-header ${bgClass} text-white">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong class="me-auto">系统通知</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body">
-                ${message}
+    return meta[type] || meta.info;
+}
+
+function showToast(type, message, options = {}) {
+    const level = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
+    const meta = getToastMeta(level);
+
+    let config = {};
+    if (typeof options === 'number') {
+        config.duration = options;
+    } else if (options && typeof options === 'object') {
+        config = options;
+    }
+
+    const title = config.title || meta.title;
+    const duration = Number.isFinite(config.duration) ? config.duration : meta.duration;
+    const safeTitle = $('<div>').text(String(title || '')).html();
+    const safeMessage = $('<div>').text(String(message || '')).html();
+
+    const toast = $(`
+        <div class="alert alert-dismissible fade show upload-toast ${meta.className}" role="alert">
+            <div class="d-flex align-items-start">
+                <i class="fas ${meta.icon} me-2 mt-1"></i>
+                <div class="flex-grow-1">
+                    <strong>${safeTitle}</strong>
+                    <p class="mb-0 mt-1">${safeMessage}</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </div>
-    `;
-    
-    const toastElement = $(toastHtml).appendTo('body');
-    const toast = new bootstrap.Toast(toastElement[0], {
-        autohide: true,
-        delay: duration
-    });
-    
-    toast.show();
-    
-    // 自动清理DOM
-    toastElement.on('hidden.bs.toast', function() {
+    `);
+
+    $('body').append(toast);
+    const alertInstance = bootstrap.Alert.getOrCreateInstance(toast[0]);
+    setTimeout(function() {
+        alertInstance.close();
+    }, duration);
+
+    toast.on('closed.bs.alert', function() {
         $(this).remove();
     });
 }
@@ -236,16 +243,17 @@ function setLoading(element, isLoading) {
 // API调用封装
 class ApiClient {
     static async request(url, options = {}) {
-        // 获取token
-        const token = localStorage.getItem('auth_token');
-
+        const defaultHeaders = {
+            'Content-Type': 'application/json'
+        };
+        const mergedHeaders = {
+            ...defaultHeaders,
+            ...(options.headers || {})
+        };
         const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                // 如果有token，自动添加到Header
-                ...(token && { 'Authorization': `Bearer ${token}` })
-            },
-            ...options
+            credentials: 'same-origin',
+            ...options,
+            headers: mergedHeaders
         };
 
         try {

@@ -172,10 +172,17 @@ def get_qa_analysis(session_id, round_index):
     logger.debug(f"Getting QA analysis for session: {session_id}, round: {round_index}")
 
     try:
-        from backend.clients.minio_client import minio_client
+        from backend.clients.minio_client import download_qa_analysis
 
-        analysis_filename = f"analysis/qa_complete_{round_index}_{session_id}.json"
-        analysis_data = minio_client.download_json(analysis_filename)
+        session_obj = SessionService.get_session(session_id)
+        if not session_obj:
+            return ApiResponse.not_found("面试会话")
+
+        room_id = session_obj.room.id
+        analysis_filename = (
+            f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_index}.json"
+        )
+        analysis_data = download_qa_analysis(room_id, session_id, round_index)
 
         if analysis_data:
             return ApiResponse.success(data={
@@ -297,7 +304,6 @@ def _start_llm_server(session_id: str, room_id: str, result: dict, round_index: 
     except Exception as e:
         logger.warning(f"Failed to start LLM server: {e}")
         result['llm_error'] = str(e)
-
 
 
 

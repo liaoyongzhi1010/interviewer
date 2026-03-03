@@ -175,7 +175,7 @@ def resumes_list():
 def resume_detail(resume_id: str):
     """简历详情页面 - 查看简历内容"""
     from backend.services.resume_service import ResumeService
-    from backend.clients.minio_client import download_resume_data
+    from backend.clients.minio_client import download_resume_data, get_resume_pdf_url
 
     current_user = request.current_user
     resume = ResumeService.get_resume(resume_id)
@@ -189,12 +189,16 @@ def resume_detail(resume_id: str):
         logger.warning(f"Unauthorized access attempt to resume {resume_id} by {current_user}")
         return "无权访问此简历", 403
 
-    # 获取简历数据
-    resume_data = download_resume_data(resume_id)
+    # 仅在解析成功时获取结构化数据
+    resume_data = None
+    if resume.parse_status == 'parsed':
+        resume_data = download_resume_data(resume_id)
+    pdf_url = get_resume_pdf_url(resume_id, expires_hours=24)
 
     return render_template('resume_detail.html',
                          resume=ResumeService.to_dict(resume),
-                         resume_data=resume_data)
+                         resume_data=resume_data,
+                         pdf_url=pdf_url)
 
 
 @room_bp.route('/mistakes')

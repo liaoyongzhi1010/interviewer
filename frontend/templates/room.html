@@ -247,6 +247,14 @@
 <script>
 const ROOM_ID = '{{ room.id }}';
 
+function showToast(type, message) {
+    if (window.YeyingInterviewer && window.YeyingInterviewer.showToast) {
+        window.YeyingInterviewer.showToast(type, message);
+        return;
+    }
+    console.log(`[${type}] ${message}`);
+}
+
 // 创建面试会话
 async function createSession() {
     const createSessionBtn = document.getElementById('createSessionBtn');
@@ -254,7 +262,7 @@ async function createSession() {
 
     // 检查是否已禁用
     if (createSessionBtn.classList.contains('disabled') || createSessionBtn.disabled) {
-        alert('请先上传简历后再创建面试会话！');
+        showToast('warning', '请先上传简历后再创建面试会话');
         return;
     }
 
@@ -284,7 +292,7 @@ async function createSession() {
         if (btnText) {
             btnText.textContent = originalText;
         }
-        alert('创建会话失败，请重试');
+        showToast('error', '创建会话失败，请重试');
     }
 }
 
@@ -326,6 +334,16 @@ function navigateToSession(element) {
 }
 
 // 检查简历状态
+function getParseStatusDisplay(parseStatus) {
+    const statusMap = {
+        pending: '待解析',
+        parsing: '解析中',
+        parsed: '解析成功',
+        failed: '解析失败'
+    };
+    return statusMap[parseStatus] || (parseStatus || '未知状态');
+}
+
 async function checkResumeStatus() {
     try {
         const response = await fetch(`/api/resume/${ROOM_ID}`);
@@ -337,24 +355,63 @@ async function checkResumeStatus() {
         const selectResumeBtnText = document.getElementById('selectResumeBtnText');
 
         if (result.success && result.data.resume) {
-            // 有简历
-            statusAlert.classList.remove('d-none', 'alert-warning', 'alert-danger');
-            statusAlert.classList.add('alert-success');
-            const companyInfo = result.data.resume.company ?
-                `<p class="mb-1"><strong>目标公司：</strong>${result.data.resume.company}</p>` : '';
-            statusContent.innerHTML = `
-                <div>
-                    <strong><i class="fas fa-check-circle me-1"></i> 已上传简历</strong>
-                    <div class="mt-2">
-                        <p class="mb-1"><strong>姓名：</strong>${result.data.resume.name || '未知'}</p>
-                        <p class="mb-1"><strong>应聘职位：</strong>${result.data.resume.position || '未知'}</p>
-                        ${companyInfo}
-                        <p class="mb-0 text-muted"><small>点击"更新简历"按钮可更新简历</small></p>
+            const resume = result.data.resume;
+            const parseStatus = resume.parse_status || 'pending';
+            const parseStatusDisplay = resume.parse_status_display || getParseStatusDisplay(parseStatus);
+            const parseError = resume.parse_error || '';
+
+            const companyInfo = resume.company ?
+                `<p class="mb-1"><strong>目标公司：</strong>${resume.company}</p>` : '';
+
+            if (parseStatus === 'parsed') {
+                statusAlert.classList.remove('d-none', 'alert-warning', 'alert-danger');
+                statusAlert.classList.add('alert-success');
+                statusContent.innerHTML = `
+                    <div>
+                        <strong><i class="fas fa-check-circle me-1"></i> 已上传简历</strong>
+                        <div class="mt-2">
+                            <p class="mb-1"><strong>姓名：</strong>${resume.name || '未知'}</p>
+                            <p class="mb-1"><strong>应聘职位：</strong>${resume.position || '未知'}</p>
+                            <p class="mb-1"><strong>解析状态：</strong>${parseStatusDisplay}</p>
+                            ${companyInfo}
+                            <p class="mb-0 text-muted"><small>点击"更新简历"按钮可更新简历</small></p>
+                        </div>
                     </div>
-                </div>
-            `;
-            createSessionBtn.classList.remove('disabled');
-            createSessionBtn.removeAttribute('disabled');
+                `;
+                createSessionBtn.classList.remove('disabled');
+                createSessionBtn.removeAttribute('disabled');
+            } else if (parseStatus === 'failed') {
+                statusAlert.classList.remove('d-none', 'alert-success', 'alert-warning');
+                statusAlert.classList.add('alert-danger');
+                statusContent.innerHTML = `
+                    <div>
+                        <strong><i class="fas fa-circle-xmark me-1"></i> 简历解析失败</strong>
+                        <div class="mt-2">
+                            <p class="mb-1"><strong>简历名称：</strong>${resume.name || '未知'}</p>
+                            <p class="mb-1"><strong>解析状态：</strong>${parseStatusDisplay}</p>
+                            <p class="mb-0 text-muted"><small>${parseError || '请到简历详情页查看失败原因后重试。'}</small></p>
+                        </div>
+                    </div>
+                `;
+                createSessionBtn.classList.add('disabled');
+                createSessionBtn.setAttribute('disabled', 'disabled');
+            } else {
+                statusAlert.classList.remove('d-none', 'alert-success', 'alert-danger');
+                statusAlert.classList.add('alert-warning');
+                statusContent.innerHTML = `
+                    <div>
+                        <strong><i class="fas fa-hourglass-half me-1"></i> 简历解析中</strong>
+                        <div class="mt-2">
+                            <p class="mb-1"><strong>简历名称：</strong>${resume.name || '未知'}</p>
+                            <p class="mb-1"><strong>解析状态：</strong>${parseStatusDisplay}</p>
+                            <p class="mb-0 text-muted"><small>请等待解析完成后再创建会话。</small></p>
+                        </div>
+                    </div>
+                `;
+                createSessionBtn.classList.add('disabled');
+                createSessionBtn.setAttribute('disabled', 'disabled');
+            }
+
             if (selectResumeBtnText) {
                 selectResumeBtnText.textContent = '更新简历';
             }
@@ -457,9 +514,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         $.ajax({
             url: '/api/resumes',
             method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
             success: function(response) {
                 if (response.code === 200) {
                     renderResumeSelectListForRoom(response.data.resumes);
@@ -488,6 +542,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         let html = '<div class="list-group">';
         resumes.forEach(function(resume) {
+            const parseStatus = resume.parse_status || 'pending';
+            const parseStatusDisplay = resume.parse_status_display || getParseStatusDisplay(parseStatus);
+            const parseBadgeClass = parseStatus === 'parsed'
+                ? 'text-bg-success'
+                : (parseStatus === 'failed' ? 'text-bg-danger' : 'text-bg-warning');
             html += `
                 <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center resume-select-item-for-room" data-resume-id="${resume.id}">
                     <div>
@@ -496,6 +555,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                             ${resume.company ? resume.company : ''}
                             ${resume.position ? resume.position : ''}
                         </small>
+                        <div class="mt-1">
+                            <span class="badge rounded-pill ${parseBadgeClass}" style="font-size: 0.72rem;">${parseStatusDisplay}</span>
+                        </div>
                     </div>
                     <i class="fas fa-chevron-right text-muted"></i>
                 </button>
@@ -524,9 +586,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             url: `/api/rooms/${ROOM_ID}/resume`,
             method: 'PUT',
             contentType: 'application/json',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
             data: JSON.stringify({
                 resume_id: resumeId
             }),

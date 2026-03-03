@@ -306,6 +306,14 @@ $(document).ready(function() {
     renameRoomModal = new bootstrap.Modal(document.getElementById('renameRoomModal'));
     selectResumeModal = new bootstrap.Modal(document.getElementById('selectResumeModal'));
 
+    function showToast(type, message) {
+        if (window.YeyingInterviewer && window.YeyingInterviewer.showToast) {
+            window.YeyingInterviewer.showToast(type, message);
+            return;
+        }
+        console.log(`[${type}] ${message}`);
+    }
+
     // 点击创建面试间按钮
     $('#createRoomBtn').on('click', function() {
         // 先加载简历列表
@@ -319,9 +327,6 @@ $(document).ready(function() {
         $.ajax({
             url: '/api/resumes',
             method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
             success: function(response) {
                 if (response.code === 200) {
                     renderResumeSelectList(response.data.resumes);
@@ -401,9 +406,6 @@ $(document).ready(function() {
             url: '/api/rooms/create',
             method: 'POST',
             contentType: 'application/json',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
             data: JSON.stringify({
                 resume_id: resumeId
             }),
@@ -413,13 +415,13 @@ $(document).ready(function() {
                     window.location.href = `/room/${response.data.room_id}`;
                 } else {
                     $('#createRoomLoading').hide();
-                    alert('创建失败：' + (response.message || '未知错误'));
+                    showToast('error', '创建失败：' + (response.message || '未知错误'));
                 }
             },
             error: function(xhr) {
                 $('#createRoomLoading').hide();
                 const response = xhr.responseJSON;
-                alert('创建失败：' + (response?.message || '网络错误'));
+                showToast('error', '创建失败：' + (response?.message || '网络错误'));
             }
         });
     }
@@ -444,19 +446,16 @@ $(document).ready(function() {
         $.ajax({
             url: `/api/rooms/${roomToDelete}`,
             method: 'DELETE',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
             success: function(response) {
                 if (response.code === 200) {
                     location.reload();
                 } else {
-                    alert('删除失败：' + (response.message || '未知错误'));
+                    showToast('error', '删除失败：' + (response.message || '未知错误'));
                 }
             },
             error: function(xhr) {
                 const response = xhr.responseJSON;
-                alert('删除失败：' + (response?.message || '网络错误'));
+                showToast('error', '删除失败：' + (response?.message || '网络错误'));
             }
         });
     });
@@ -469,7 +468,7 @@ $(document).ready(function() {
 
         const newName = $('#newRoomName').val().trim();
         if (!newName) {
-            alert('请输入新名称');
+            showToast('warning', '请输入新名称');
             return;
         }
 
@@ -479,9 +478,6 @@ $(document).ready(function() {
             url: `/api/rooms/${roomToRename}`,
             method: 'PUT',
             contentType: 'application/json',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
             data: JSON.stringify({
                 name: newName
             }),
@@ -489,12 +485,12 @@ $(document).ready(function() {
                 if (response.code === 200) {
                     location.reload();
                 } else {
-                    alert('重命名失败：' + (response.message || '未知错误'));
+                    showToast('error', '重命名失败：' + (response.message || '未知错误'));
                 }
             },
             error: function(xhr) {
                 const response = xhr.responseJSON;
-                alert('重命名失败：' + (response?.message || '网络错误'));
+                showToast('error', '重命名失败：' + (response?.message || '网络错误'));
             }
         });
     });

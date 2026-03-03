@@ -7,7 +7,7 @@ import json
 import uuid
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-from backend.clients.minio_client import minio_client
+from backend.clients.minio_client import download_qa_analysis, upload_evaluation_report
 from backend.clients.llm.qwen_client import QwenClient
 from backend.clients.llm.prompts.evaluation_prompts import (
     get_interview_evaluation_prompt,
@@ -28,8 +28,14 @@ class InterviewEvaluationService:
     def generate_evaluation_report(self, session_id: str, round_index: int) -> Optional[Dict[str, Any]]:
         """生成面试评价报告"""
         try:
+            from backend.services.interview_service import SessionService
+            session = SessionService.get_session(session_id)
+            if not session:
+                raise ValueError("会话不存在")
+            room_id = session.room.id
+
             # 1. 加载QA数据
-            qa_data = self._load_qa_data(session_id, round_index)
+            qa_data = self._load_qa_data(room_id, session_id, round_index)
             if not qa_data:
                 raise ValueError("无法加载QA数据")
 
@@ -40,8 +46,10 @@ class InterviewEvaluationService:
             report_data = self._build_evaluation_report(qa_data, evaluation_result, session_id, round_index)
 
             # 4. 保存评价报告到MinIO
-            report_filename = f"reports/evaluation_{round_index}_{session_id}.json"
-            success = minio_client.upload_json(report_filename, report_data)
+            report_filename = (
+                f"rooms/{room_id}/sessions/{session_id}/reports/evaluation_{round_index}.json"
+            )
+            success = upload_evaluation_report(report_data, room_id, session_id, round_index)
 
             if success:
                 logger.info(f"Evaluation report saved: {report_filename}")
@@ -60,18 +68,8 @@ class InterviewEvaluationService:
                 'error': str(e)
             }
 
-    def _load_qa_data(self, session_id: str, round_index: int) -> Optional[Dict[str, Any]]:
+    def _load_qa_data(self, room_id: str, session_id: str, round_index: int) -> Optional[Dict[str, Any]]:
         """加载QA完成数据"""
-        # 获取session对应的room_id
-        from backend.services.interview_service import SessionService
-        session = SessionService.get_session(session_id)
-        if not session:
-            return None
-
-        room_id = session.room.id
-
-        # 使用新的路径结构
-        from backend.clients.minio_client import download_qa_analysis
         return download_qa_analysis(room_id, session_id, round_index)
 
     def _evaluate_with_llm(self, qa_data: Dict[str, Any]) -> Dict[str, Any]:

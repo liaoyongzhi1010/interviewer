@@ -4,9 +4,8 @@ MinerU PDF解析服务客户端
 
 import os
 import time
-import uuid
 import requests
-from typing import Optional, Dict, Any
+from typing import Optional
 from dotenv import load_dotenv
 from backend.common.logger import get_logger
 
@@ -21,6 +20,7 @@ class MinerUClient:
     def __init__(self):
         self.api_key = os.getenv("MINERU_API_KEY")
         self.base_url = os.getenv("MINERU_API_URL", "https://mineru.net/api/v4")
+        self.last_error: Optional[str] = None
 
         if not self.api_key:
             raise ValueError("MINERU_API_KEY not found in environment variables")
@@ -31,78 +31,43 @@ class MinerUClient:
             "Content-Type": "application/json"
         }
 
-    def parse_pdf(self, pdf_file_path: str) -> Optional[str]:
+    def parse_pdf_from_url(self, pdf_url: str) -> Optional[str]:
         """
-        解析PDF文件，返回Markdown格式内容
+        通过已存在的PDF访问链接解析PDF，返回Markdown格式内容
 
         Args:
-            pdf_file_path: PDF文件路径
+            pdf_url: 可被 MinerU 访问的 PDF 预签名 URL
 
         Returns:
             Markdown格式的解析内容，失败返回None
         """
-        try:
-            # 1. 先上传PDF文件到MinIO并获取URL
-            pdf_url = self._upload_pdf_to_minio(pdf_file_path)
-            if not pdf_url:
-                logger.error("Failed to upload PDF to storage")
-                return None
+        self.last_error = None
 
-            logger.info(f"PDF uploaded to storage: {pdf_url}")
-
-            # 2. 提交解析任务
-            task_id = self._submit_parse_task(pdf_url)
-            if not task_id:
-                logger.error("Failed to submit parse task")
-                return None
-
-            logger.info(f"Parse task submitted, task_id: {task_id}")
-
-            # 3. 轮询解析状态并获取结果
-            markdown_content = self._poll_parse_result(task_id)
-
-            return markdown_content
-
-        except Exception as e:
-            logger.error(f"Error parsing PDF with MinerU: {e}", exc_info=True)
+        if not pdf_url:
+            self.last_error = "PDF访问链接为空"
             return None
 
-    def _upload_pdf_to_minio(self, pdf_file_path: str) -> Optional[str]:
-        """上传PDF文件到MinIO并返回预签名URL"""
         try:
-            from backend.clients.minio_client import minio_client
-
-            # 检查文件是否存在
-            if not os.path.exists(pdf_file_path):
-                logger.error(f"PDF file not found: {pdf_file_path}")
-                return None
-
-            # 检查文件大小（200MB限制）
-            file_size = os.path.getsize(pdf_file_path)
-            if file_size > 200 * 1024 * 1024:
-                logger.error(f"PDF file too large: {file_size / (1024*1024):.2f}MB (max 200MB)")
-                return None
-
-            # 上传到MinIO
-            filename = f"temp/resume_{uuid.uuid4().hex}.pdf"
-            success = minio_client.upload_file(filename, pdf_file_path)
-
-            if not success:
-                return None
-
-            # 生成预签名URL（24小时有效）
-            presigned_url = minio_client.get_presigned_url(filename, expires_hours=24)
-
-            if not presigned_url:
-                logger.error("Failed to generate presigned URL")
-                return None
-
-            logger.info(f"Generated presigned URL (valid for 24 hours)")
-            return presigned_url
-
+            return self._parse_pdf_url(pdf_url)
         except Exception as e:
-            logger.error(f"Error uploading PDF to MinIO: {e}", exc_info=True)
+            logger.error(f"Error parsing PDF from URL with MinerU: {e}", exc_info=True)
+            self.last_error = f"MinerU 解析异常: {e}"
             return None
+
+    def _parse_pdf_url(self, pdf_url: str) -> Optional[str]:
+        """提交并轮询 MinerU 解析任务（输入为 PDF URL）"""
+        # 提交解析任务
+        task_id = self._submit_parse_task(pdf_url)
+        if not task_id:
+            logger.error("Failed to submit parse task")
+            if not self.last_error:
+                self.last_error = "提交 PDF 解析任务失败"
+            return None
+
+        logger.info(f"Parse task submitted, task_id: {task_id}")
+
+        # 轮询解析状态并获取结果
+        return self._poll_parse_result(task_id)
 
     def _submit_parse_task(self, pdf_url: str) -> Optional[str]:
         """提交PDF解析任务"""
@@ -123,13 +88,17 @@ class MinerUClient:
 
                 # 获取task_id
                 task_id = result.get('data', {}).get('task_id') or result.get('data')
+                if not task_id:
+                    self.last_error = "MinerU 返回成功但未提供 task_id"
                 return task_id
             else:
                 logger.error(f"Submit task failed: {response.status_code}, {response.text}")
+                self.last_error = self._format_submit_error(response)
                 return None
 
         except Exception as e:
             logger.error(f"Error submitting parse task: {e}", exc_info=True)
+            self.last_error = f"提交解析任务异常: {e}"
             return None
 
     def _poll_parse_result(self, task_id: str, max_attempts: int = 60, interval: int = 5) -> Optional[str]:
@@ -182,6 +151,7 @@ class MinerUClient:
                 elif state == 'failed':
                     err_msg = data.get('err_msg', 'Unknown error')
                     logger.error(f"Parse failed: {err_msg}")
+                    self.last_error = f"MinerU 解析失败: {err_msg}"
                     return None
                 elif state in ['pending', 'running', 'converting']:
                     # 继续等待
@@ -191,50 +161,98 @@ class MinerUClient:
                     time.sleep(interval)
 
             logger.error(f"Parse timeout after {max_attempts * interval} seconds")
+            self.last_error = "MinerU 解析超时，请稍后重试"
             return None
 
         except Exception as e:
             logger.error(f"Error polling parse result: {e}", exc_info=True)
+            self.last_error = f"轮询解析结果异常: {e}"
             return None
 
     def _download_and_extract_zip(self, zip_url: str) -> Optional[str]:
-        """下载ZIP文件并提取markdown内容"""
+        """下载ZIP文件并提取markdown内容（60秒超时，最多重试3次）"""
+        import io
+        import zipfile
+
+        max_attempts = 3
+        timeout_seconds = 60
+        last_error: Optional[Exception] = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(
+                    f"Downloading ZIP file... (attempt {attempt}/{max_attempts}, timeout={timeout_seconds}s)"
+                )
+                response = requests.get(zip_url, timeout=timeout_seconds)
+
+                if response.status_code != 200:
+                    logger.warning(
+                        f"Failed to download ZIP: HTTP {response.status_code} (attempt {attempt}/{max_attempts})"
+                    )
+                    self.last_error = f"下载解析结果失败 (HTTP {response.status_code})"
+                    if attempt < max_attempts:
+                        time.sleep(2 * attempt)
+                        continue
+                    return None
+
+                logger.info(f"ZIP file downloaded ({len(response.content)} bytes)")
+
+                # 解压ZIP文件
+                zip_file = zipfile.ZipFile(io.BytesIO(response.content))
+
+                # 查找markdown文件
+                markdown_files = [f for f in zip_file.namelist() if f.endswith('.md')]
+
+                if not markdown_files:
+                    logger.error("No markdown file found in ZIP")
+                    self.last_error = "解析结果中未找到 Markdown 文件"
+                    return None
+
+                # 读取第一个markdown文件
+                md_filename = markdown_files[0]
+                logger.info(f"Extracting markdown from: {md_filename}")
+
+                markdown_content = zip_file.read(md_filename).decode('utf-8')
+                logger.info(f"Markdown extracted ({len(markdown_content)} characters)")
+                return markdown_content
+
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    f"Download/extract ZIP failed on attempt {attempt}/{max_attempts}: {e}"
+                )
+                if attempt < max_attempts:
+                    time.sleep(2 * attempt)
+                    continue
+
+        logger.error(f"Error downloading/extracting ZIP after {max_attempts} attempts: {last_error}")
+        self.last_error = f"下载或解压解析结果异常: {last_error}"
+        return None
+
+    def get_last_error(self) -> Optional[str]:
+        """获取最近一次解析失败原因"""
+        return self.last_error
+
+    def _format_submit_error(self, response: requests.Response) -> str:
+        """格式化提交任务失败信息，便于前端展示"""
+        default_error = f"MinerU 提交任务失败 (HTTP {response.status_code})"
+
         try:
-            import zipfile
-            import io
+            error_data = response.json()
+        except ValueError:
+            return default_error
 
-            # 下载ZIP文件
-            logger.info("Downloading ZIP file...")
-            response = requests.get(zip_url, timeout=60)
+        msg_code = error_data.get("msgCode")
+        msg = error_data.get("msg") or error_data.get("message")
 
-            if response.status_code != 200:
-                logger.error(f"Failed to download ZIP: {response.status_code}")
-                return None
+        if response.status_code == 401 and msg_code == "A0202":
+            return "MinerU 鉴权失败：MINERU_API_KEY 无效或已过期，请更新后重试"
 
-            logger.info(f"ZIP file downloaded ({len(response.content)} bytes)")
-
-            # 解压ZIP文件
-            zip_file = zipfile.ZipFile(io.BytesIO(response.content))
-
-            # 查找markdown文件
-            markdown_files = [f for f in zip_file.namelist() if f.endswith('.md')]
-
-            if not markdown_files:
-                logger.error("No markdown file found in ZIP")
-                return None
-
-            # 读取第一个markdown文件
-            md_filename = markdown_files[0]
-            logger.info(f"Extracting markdown from: {md_filename}")
-
-            markdown_content = zip_file.read(md_filename).decode('utf-8')
-            logger.info(f"Markdown extracted ({len(markdown_content)} characters)")
-
-            return markdown_content
-
-        except Exception as e:
-            logger.error(f"Error downloading/extracting ZIP: {e}", exc_info=True)
-            return None
+        if msg_code and msg:
+            return f"{default_error}: {msg_code} - {msg}"
+        if msg:
+            return f"{default_error}: {msg}"
+        return default_error
 
 
 # 全局客户端实例

@@ -37,6 +37,26 @@ logger = logging.getLogger(__name__)
 JWT_SECRET = os.getenv("JWT_SECRET", "e802e988a02546cc47415e4bc76346aae7ceece97a0f950319c861a5de38b20d")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 1
+AUTH_COOKIE_NAME = "auth_token"
+AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "Lax")
+AUTH_COOKIE_DOMAIN = os.getenv("AUTH_COOKIE_DOMAIN")
+
+
+def _to_bool(value: Optional[str], default: bool = False) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+AUTH_COOKIE_SECURE = _to_bool(os.getenv("AUTH_COOKIE_SECURE"), default=False)
+
+
+def _should_use_secure_cookie() -> bool:
+    if AUTH_COOKIE_SECURE:
+        return True
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+    proto = forwarded_proto.split(",")[0].strip().lower() if forwarded_proto else ""
+    return request.is_secure or proto == "https"
 
 # 模拟 Redis：存储 challenge（生产环境请替换为 Redis）
 challenges: Dict[str, Dict[str, Any]] = {}
@@ -126,12 +146,14 @@ def auth_verify(body):  # noqa: E501
 
         # ⭐ 设置 Cookie (用于页面访问时的鉴权)
         response.set_cookie(
-            'auth_token',
+            AUTH_COOKIE_NAME,
             token,
-            httponly=True,      # 防止XSS攻击
-            secure=False,       # 生产环境改为True (仅HTTPS)
-            samesite='Lax',     # CSRF保护
-            max_age=3600        # 1小时过期
+            httponly=True,
+            secure=_should_use_secure_cookie(),
+            samesite=AUTH_COOKIE_SAMESITE,
+            max_age=JWT_EXPIRE_HOURS * 3600,
+            path='/',
+            domain=AUTH_COOKIE_DOMAIN
         )
 
         # 设置响应类型
@@ -159,7 +181,16 @@ def auth_logout():
     })
 
     # 清除Cookie
-    response.set_cookie('auth_token', '', expires=0)
+    response.set_cookie(
+        AUTH_COOKIE_NAME,
+        '',
+        expires=0,
+        path='/',
+        domain=AUTH_COOKIE_DOMAIN,
+        secure=_should_use_secure_cookie(),
+        samesite=AUTH_COOKIE_SAMESITE,
+        httponly=True
+    )
     response.headers['Content-Type'] = 'application/json'
 
     return response

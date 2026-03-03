@@ -118,17 +118,17 @@
     $(document).ready(function() {
         // 拦截需要登录的导航链接
         $('.nav-link-protected').on('click', function(e) {
-            const token = localStorage.getItem('auth_token');
+            const walletAddress = localStorage.getItem('wallet_address');
 
             // 如果未登录，阻止跳转并提示
-            if (!token) {
+            if (!walletAddress) {
                 e.preventDefault();
 
                 // 显示提示
                 if (window.YeyingInterviewer && window.YeyingInterviewer.showToast) {
                     window.YeyingInterviewer.showToast('warning', '请先连接钱包登录');
                 } else {
-                    alert('请先连接钱包登录');
+                    console.log('[warning] 请先连接钱包登录');
                 }
 
                 // 触发连接钱包按钮点击

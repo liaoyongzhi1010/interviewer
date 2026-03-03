@@ -17,6 +17,7 @@ class ResumeParser:
 
     def __init__(self):
         self.qwen_client = QwenClient()
+        self.last_error: Optional[str] = None
 
     def extract_resume_data(self, markdown_content: str) -> Optional[Dict[str, Any]]:
         """
@@ -34,9 +35,12 @@ class ResumeParser:
                 "projects": ["项目1", "项目2"]
             }
         """
+        self.last_error = None
+
         try:
             if not markdown_content or not markdown_content.strip():
                 logger.error("Empty markdown content")
+                self.last_error = "简历内容为空，无法提取结构化数据"
                 return None
 
             # 生成提取提示词
@@ -48,6 +52,7 @@ class ResumeParser:
 
             if not response:
                 logger.error("No response from LLM")
+                self.last_error = "Qwen 未返回内容，请稍后重试"
                 return None
 
             # 解析JSON响应
@@ -55,6 +60,7 @@ class ResumeParser:
 
             if not resume_data:
                 logger.error("Failed to parse JSON from LLM response")
+                self.last_error = "Qwen 返回结果格式异常，无法解析结构化数据"
                 return None
 
             # 验证数据完整性
@@ -64,7 +70,34 @@ class ResumeParser:
 
         except Exception as e:
             logger.error(f"Error extracting resume data: {e}", exc_info=True)
+            self.last_error = self._format_extract_error(e)
             return None
+
+    def get_last_error(self) -> Optional[str]:
+        """获取最近一次结构化提取失败原因"""
+        return self.last_error
+
+    def _format_extract_error(self, error: Exception) -> str:
+        """格式化Qwen调用异常，返回可读的用户提示"""
+        error_text = str(error)
+        error_lower = error_text.lower()
+
+        if "api_key is required" in error_lower or "api key is required" in error_lower:
+            return "Qwen 配置缺失：未设置 QWEN_API_KEY"
+
+        if "overdue-payment" in error_lower or "account is in good standing" in error_lower:
+            return "Qwen 服务不可用：账号状态异常（可能欠费），请检查阿里云百炼账户状态和 QWEN_API_KEY"
+
+        if "invalid api-key" in error_lower or "invalid api key" in error_lower:
+            return "Qwen 鉴权失败：QWEN_API_KEY 无效，请更新后重试"
+
+        if "unauthorized" in error_lower or "401" in error_lower:
+            return "Qwen 鉴权失败：无访问权限，请检查 QWEN_API_KEY 与模型权限"
+
+        if "timeout" in error_lower:
+            return "Qwen 请求超时，请稍后重试"
+
+        return f"简历结构化提取失败：{error_text}"
 
     def _parse_json_response(self, response: str) -> Optional[Dict[str, Any]]:
         """解析LLM返回的JSON响应"""

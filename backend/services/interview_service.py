@@ -180,16 +180,16 @@ class SessionService:
         try:
             session = Session.get_by_id(session_id)
 
-            # 删除相关的MinIO文件
+            # 删除相关的轮次（会自动删除MinIO文件和QuestionAnswer记录）
+            for round_obj in session.rounds:
+                RoundService.delete_round(round_obj.id)
+
+            # 删除会话目录下剩余的MinIO文件（如reports等）
             try:
                 from backend.clients.minio_client import minio_client
                 minio_client.delete_session_files(session_id)
             except Exception as e:
                 logger.warning(f"Failed to delete MinIO files for session {session_id}: {e}")
-
-            # 删除相关的轮次（会自动删除MinIO文件和QuestionAnswer记录）
-            for round_obj in session.rounds:
-                RoundService.delete_round(round_obj.id)
 
             # 删除会话记录
             session.delete_instance()
@@ -262,7 +262,9 @@ class RoundService:
         
         round_id = str(uuid.uuid4())
         round_index = session.rounds.count()
-        questions_file_path = f"data/questions_round_{round_index}_{session_id}.json"
+        questions_file_path = (
+            f"rooms/{session.room.id}/sessions/{session_id}/questions/round_{round_index}.json"
+        )
         
         round_obj = Round.create(
             id=round_id,
@@ -327,13 +329,20 @@ class RoundService:
         try:
             from backend.clients.minio_client import minio_client
 
-            # 删除题目文件: data/questions_round_{index}_{session_id}.json
-            questions_file = f"data/questions_round_{round_obj.round_index}_{round_obj.session.id}.json"
+            room_id = round_obj.session.room.id
+            session_id = round_obj.session.id
+
+            # 删除题目文件: rooms/{room_id}/sessions/{session_id}/questions/round_{round_index}.json
+            questions_file = (
+                f"rooms/{room_id}/sessions/{session_id}/questions/round_{round_obj.round_index}.json"
+            )
             minio_client.delete_object(questions_file)
             logger.info(f"Deleted questions file: {questions_file}")
 
-            # 删除分析文件: analysis/qa_complete_{round_index}_{session_id}.json
-            analysis_file = f"analysis/qa_complete_{round_obj.round_index}_{round_obj.session.id}.json"
+            # 删除分析文件: rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_index}.json
+            analysis_file = (
+                f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_obj.round_index}.json"
+            )
             minio_client.delete_object(analysis_file)
             logger.info(f"Deleted analysis file: {analysis_file}")
 

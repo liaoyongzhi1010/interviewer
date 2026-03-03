@@ -217,7 +217,9 @@ class AnswerHandler:
             memory_id = room.memory_id
 
             # 构建 MinIO 路径作为 URL
-            minio_url = f"rooms/{room_id}/sessions/{session_id}/analysis/round_{round_obj.round_index}.json"
+            minio_url = (
+                f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_obj.round_index}.json"
+            )
 
             # 将 qa_data 转换为 JSON 字符串作为 description
             description = json.dumps(qa_data, ensure_ascii=False)

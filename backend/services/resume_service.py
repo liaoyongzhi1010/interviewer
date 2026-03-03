@@ -14,6 +14,13 @@ logger = get_logger(__name__)
 class ResumeService:
     """简历管理服务"""
 
+    PARSE_STATUS_DISPLAY = {
+        'pending': '待解析',
+        'parsing': '解析中',
+        'parsed': '解析成功',
+        'failed': '解析失败'
+    }
+
     @staticmethod
     def check_name_exists(owner_address: str, name: str, exclude_resume_id: Optional[str] = None) -> bool:
         """
@@ -79,7 +86,9 @@ class ResumeService:
                 file_size=file_size,
                 company=company,
                 position=position,
-                status='active'
+                status='active',
+                parse_status='pending',
+                parse_error=None
             )
 
         logger.info(f"Created resume: {resume_id} for user: {owner_address}")
@@ -186,6 +195,40 @@ class ResumeService:
             return False
 
     @staticmethod
+    def update_parse_status(resume_id: str, parse_status: str, parse_error: Optional[str] = None) -> bool:
+        """
+        更新简历解析状态
+
+        Args:
+            resume_id: 简历ID
+            parse_status: pending/parsing/parsed/failed
+            parse_error: 失败原因（成功时传None）
+
+        Returns:
+            是否更新成功
+        """
+        try:
+            resume = Resume.get_by_id(resume_id)
+            resume.parse_status = parse_status
+            resume.parse_error = parse_error
+            resume.save()
+            logger.info(
+                f"Updated resume parse status: {resume_id} -> {parse_status}"
+                + (f" ({parse_error})" if parse_error else "")
+            )
+            return True
+        except Resume.DoesNotExist:
+            logger.warning(f"Resume not found when updating parse status: {resume_id}")
+            return False
+
+    @staticmethod
+    def get_parse_status_display(parse_status: Optional[str]) -> str:
+        """获取解析状态展示文本"""
+        if not parse_status:
+            return '未知状态'
+        return ResumeService.PARSE_STATUS_DISPLAY.get(parse_status, parse_status)
+
+    @staticmethod
     def get_resume_stats(owner_address: str) -> Dict[str, int]:
         """
         获取用户简历统计信息
@@ -203,6 +246,12 @@ class ResumeService:
             (Resume.status == 'active')
         ).count()
 
+        parsed_resumes = Resume.select().where(
+            (Resume.owner_address == owner_address) &
+            (Resume.status == 'active') &
+            (Resume.parse_status == 'parsed')
+        ).count()
+
         # 统计关联的面试间数量
         linked_rooms = Room.select().where(
             (Room.owner_address == owner_address) &
@@ -211,6 +260,7 @@ class ResumeService:
 
         return {
             'total_resumes': total_resumes,
+            'parsed_resumes': parsed_resumes,
             'linked_rooms': linked_rooms
         }
 
@@ -233,16 +283,24 @@ class ResumeService:
         )
         linked_rooms_list = [{'id': room.id, 'name': room.name} for room in linked_rooms]
         linked_rooms_count = len(linked_rooms_list)
+        file_name = (resume.file_name or '').strip()
+        fallback_names = {'-.pdf', '-_.pdf', '.pdf', '-'}
+        if not file_name or file_name.lower() in fallback_names:
+            fallback_name = resume.name or 'resume'
+            file_name = fallback_name if fallback_name.lower().endswith('.pdf') else f"{fallback_name}.pdf"
 
         return {
             'id': resume.id,
             'name': resume.name,
             'owner_address': resume.owner_address,
-            'file_name': resume.file_name,
+            'file_name': file_name,
             'file_size': resume.file_size,
             'company': resume.company,
             'position': resume.position,
             'status': resume.status,
+            'parse_status': resume.parse_status,
+            'parse_status_display': ResumeService.get_parse_status_display(resume.parse_status),
+            'parse_error': resume.parse_error,
             'linked_rooms_count': linked_rooms_count,
             'linked_rooms': linked_rooms_list,
             'created_at': resume.created_at.isoformat() if resume.created_at else None,

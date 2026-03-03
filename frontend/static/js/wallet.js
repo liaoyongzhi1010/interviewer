@@ -5,7 +5,6 @@
 // 全局变量
 let wallet = null;
 let currentAccount = null;
-let authToken = null;
 
 // API 地址
 const API_BASE = window.location.origin + '/api/v1';
@@ -142,20 +141,16 @@ async function performWalletLogin() {
         }
 
         const verifyData = await verifyRes.json();
-        if (!verifyData.body || !verifyData.body.token) {
+        if (!verifyData.body) {
             throw new Error('验证响应格式错误');
         }
 
-        authToken = verifyData.body.token;
-
-        // 5. 保存 token
-        localStorage.setItem('auth_token', authToken);
+        // 5. 仅保存地址用于界面展示，鉴权由 HttpOnly Cookie 承担
         localStorage.setItem('wallet_address', address);
 
         console.log('登录成功！');
-        console.log('Token:', authToken);
 
-        return { address, token: authToken };
+        return { address };
 
     } catch (error) {
         console.error('登录失败:', error);
@@ -195,11 +190,11 @@ function updateWalletUI(isConnected) {
  * 显示 Toast 提示
  */
 function showToast(type, message) {
-    // 使用现有的 toast 工具，或者简单的 alert
+    // 使用现有 toast 工具，兜底为控制台日志（避免浏览器原生弹窗）
     if (window.YeyingInterviewer && window.YeyingInterviewer.showToast) {
         window.YeyingInterviewer.showToast(type, message);
     } else {
-        alert(message);
+        console.log(`[${type}] ${message}`);
     }
 }
 
@@ -223,11 +218,9 @@ $(document).ready(async function() {
         console.warn('钱包检测失败:', error.message);
     }
 
-    // 检查是否已登录
-    const savedToken = localStorage.getItem('auth_token');
+    // 检查是否已登录（用于 UI 显示）
     const savedAddress = localStorage.getItem('wallet_address');
-    if (savedToken && savedAddress) {
-        authToken = savedToken;
+    if (savedAddress) {
         currentAccount = savedAddress;
         updateWalletUI(true);
         console.log('已恢复登录状态');
@@ -298,8 +291,6 @@ $(document).ready(async function() {
 
         // 清除本地登录状态
         currentAccount = null;
-        authToken = null;
-        localStorage.removeItem('auth_token');
         localStorage.removeItem('wallet_address');
 
         console.log('已退出登录');
@@ -315,8 +306,6 @@ $(document).ready(async function() {
             if (accounts.length === 0) {
                 // 断开连接 - 清除所有状态并刷新
                 currentAccount = null;
-                authToken = null;
-                localStorage.removeItem('auth_token');
                 localStorage.removeItem('wallet_address');
 
                 // 调用后端清除Cookie
@@ -331,8 +320,6 @@ $(document).ready(async function() {
                 // 切换账户 - 需要重新登录
                 console.log('检测到账户切换，需要重新登录');
                 currentAccount = null;
-                authToken = null;
-                localStorage.removeItem('auth_token');
                 localStorage.removeItem('wallet_address');
 
                 // 调用后端清除Cookie
@@ -358,7 +345,5 @@ $(document).ready(async function() {
 window.walletDebug = {
     wallet,
     currentAccount,
-    authToken,
-    getToken: () => authToken,
     getAddress: () => currentAccount
 };

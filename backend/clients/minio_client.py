@@ -96,10 +96,15 @@ class MinIOClient:
                 response.close()
                 response.release_conn()
     
-    def upload_file(self, object_name: str, file_path: str) -> bool:
+    def upload_file(self, object_name: str, file_path: str, content_type: Optional[str] = None) -> bool:
         """上传本地文件到MinIO"""
         try:
-            self.client.fput_object(self.bucket_name, object_name, file_path)
+            self.client.fput_object(
+                self.bucket_name,
+                object_name,
+                file_path,
+                content_type=content_type
+            )
             logger.info(f"Successfully uploaded {file_path} as {object_name}")
             return True
 
@@ -153,20 +158,12 @@ class MinIOClient:
     def delete_session_files(self, session_id: str) -> bool:
         """删除会话相关的所有文件"""
         try:
-            # 列出所有相关文件
+            session_path_token = f"/sessions/{session_id}/"
             objects = self.list_objects()
             deleted_count = 0
 
             for obj_name in objects:
-                # 删除题目文件: data/questions_round_*_{session_id}.json
-                if (obj_name.startswith("data/questions_round_") and
-                    obj_name.endswith(f"_{session_id}.json")):
-                    if self.delete_object(obj_name):
-                        deleted_count += 1
-
-                # 删除分析文件: analysis/qa_complete_*_{session_id}.json
-                elif (obj_name.startswith("analysis/qa_complete_") and
-                      obj_name.endswith(f"_{session_id}.json")):
+                if session_path_token in obj_name:
                     if self.delete_object(obj_name):
                         deleted_count += 1
 
@@ -177,7 +174,12 @@ class MinIOClient:
             logger.error(f"Error deleting session files: {e}")
             return False
 
-    def get_presigned_url(self, object_name: str, expires_hours: int = 24) -> Optional[str]:
+    def get_presigned_url(
+        self,
+        object_name: str,
+        expires_hours: int = 24,
+        response_headers: Optional[Dict[str, str]] = None
+    ) -> Optional[str]:
         """
         生成预签名URL，允许临时公开访问
 
@@ -193,7 +195,8 @@ class MinIOClient:
             url = self.client.presigned_get_object(
                 self.bucket_name,
                 object_name,
-                expires=timedelta(hours=expires_hours)
+                expires=timedelta(hours=expires_hours),
+                response_headers=response_headers
             )
             return url
         except S3Error as e:
@@ -220,6 +223,21 @@ def upload_resume_data(resume_data: Dict[str, Any], resume_id: str) -> bool:
     return minio_client.upload_json(object_name, resume_data)
 
 
+def upload_resume_pdf(pdf_file_path: str, resume_id: str) -> bool:
+    """
+    上传原始简历PDF到MinIO
+
+    Args:
+        pdf_file_path: 本地PDF路径
+        resume_id: 简历ID
+
+    Returns:
+        是否上传成功
+    """
+    object_name = f"resumes/{resume_id}/original.pdf"
+    return minio_client.upload_file(object_name, pdf_file_path, content_type='application/pdf')
+
+
 def download_resume_data(resume_id: str) -> Optional[Dict[str, Any]]:
     """
     从MinIO下载简历数据
@@ -234,6 +252,31 @@ def download_resume_data(resume_id: str) -> Optional[Dict[str, Any]]:
     return minio_client.download_json(object_name)
 
 
+def get_resume_pdf_url(resume_id: str, expires_hours: int = 24) -> Optional[str]:
+    """
+    获取简历原始PDF的预签名访问链接
+
+    Args:
+        resume_id: 简历ID
+        expires_hours: 链接有效期（小时）
+
+    Returns:
+        预签名URL，若PDF不存在则返回None
+    """
+    object_name = f"resumes/{resume_id}/original.pdf"
+    if not minio_client.object_exists(object_name):
+        return None
+    response_headers = {
+        'response-content-type': 'application/pdf',
+        'response-content-disposition': 'inline'
+    }
+    return minio_client.get_presigned_url(
+        object_name,
+        expires_hours=expires_hours,
+        response_headers=response_headers
+    )
+
+
 def delete_resume_data(resume_id: str) -> bool:
     """
     从MinIO删除简历数据
@@ -245,6 +288,20 @@ def delete_resume_data(resume_id: str) -> bool:
         是否删除成功
     """
     object_name = f"resumes/{resume_id}/resume.json"
+    return minio_client.delete_object(object_name)
+
+
+def delete_resume_pdf(resume_id: str) -> bool:
+    """
+    删除简历原始PDF
+
+    Args:
+        resume_id: 简历ID
+
+    Returns:
+        是否删除成功
+    """
+    object_name = f"resumes/{resume_id}/original.pdf"
     return minio_client.delete_object(object_name)
 
 

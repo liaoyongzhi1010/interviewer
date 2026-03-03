@@ -28,6 +28,7 @@ def create_session(room_id):
     """在指定面试间创建新的面试会话 - 需要登录且必须是room的owner"""
     # 获取面试间信息
     from backend.services.interview_service import RoomService
+    from backend.services.resume_service import ResumeService
     room = RoomService.get_room(room_id)
     if not room:
         logger.warning(f"Room not found: {room_id}")
@@ -49,16 +50,62 @@ def create_session(room_id):
         </html>
         """, 400
 
-    # 检查简历数据是否已上传到MinIO
-    resume_data = download_resume_data(room.resume_id)
-    if not resume_data:
-        logger.warning(f"Resume data not found in MinIO for resume: {room.resume_id}")
+    resume = ResumeService.get_resume(room.resume_id)
+    if not resume:
+        logger.warning(f"Resume not found for room: {room_id}, resume_id: {room.resume_id}")
         return """
         <html>
         <head>
             <meta charset=\"UTF-8\">
             <script>
-                alert('简历数据未找到，请重新上传简历！');
+                alert('关联简历不存在，请重新选择简历！');
+                window.history.back();
+            </script>
+        </head>
+        <body></body>
+        </html>
+        """, 400
+
+    if resume.parse_status in {'pending', 'parsing'}:
+        logger.info(f"Resume is still parsing: {room.resume_id}")
+        return """
+        <html>
+        <head>
+            <meta charset=\"UTF-8\">
+            <script>
+                alert('简历正在解析中，请稍后再创建会话。');
+                window.history.back();
+            </script>
+        </head>
+        <body></body>
+        </html>
+        """, 400
+
+    if resume.parse_status == 'failed':
+        logger.warning(f"Resume parse failed for room {room_id}, resume: {room.resume_id}")
+        return """
+        <html>
+        <head>
+            <meta charset=\"UTF-8\">
+            <script>
+                alert('简历解析失败，请到简历详情页查看失败原因后重试。');
+                window.history.back();
+            </script>
+        </head>
+        <body></body>
+        </html>
+        """, 400
+
+    # 解析完成后再检查结构化数据
+    resume_data = download_resume_data(room.resume_id)
+    if not resume_data:
+        logger.warning(f"Parsed resume data missing in MinIO for resume: {room.resume_id}")
+        return """
+        <html>
+        <head>
+            <meta charset=\"UTF-8\">
+            <script>
+                alert('简历解析结果尚未就绪，请稍后重试。');
                 window.history.back();
             </script>
         </head>
@@ -91,7 +138,10 @@ def session_detail(session_id):
     room = session.room
     resume_data = None
     if room.resume_id:
-        resume_data = download_resume_data(room.resume_id)
+        from backend.services.resume_service import ResumeService
+        resume = ResumeService.get_resume(room.resume_id)
+        if resume and resume.parse_status == 'parsed':
+            resume_data = download_resume_data(room.resume_id)
 
     # 检查是否有自定义 JD
     has_custom_jd = bool(session.room.jd_id)

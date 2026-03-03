@@ -156,23 +156,13 @@ def get_current_user() -> Optional[str]:
     """
     获取当前登录用户的钱包地址
 
-    支持两种Token传递方式:
-    1. Authorization Header (API请求): Bearer <token>
-    2. Cookie (页面请求): auth_token=<token>
+    Token 仅通过 Cookie 传递:
+    - Cookie: auth_token=<token>
 
     Returns:
         钱包地址 (如: 0x1234...) 或 None
     """
-    token = None
-
-    # 方式1: 从 Authorization Header 获取 (优先级高)
-    auth_header = request.headers.get('Authorization')
-    if auth_header and auth_header.startswith('Bearer '):
-        token = auth_header.split(' ')[1]
-
-    # 方式2: 从 Cookie 获取
-    if not token:
-        token = request.cookies.get('auth_token')
+    token = request.cookies.get('auth_token')
 
     if not token:
         return None
@@ -312,4 +302,3 @@ def require_resource_owner(resource_type: str = 'room'):
 
         return decorated_function
     return decorator
-

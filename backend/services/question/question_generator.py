@@ -54,16 +54,36 @@ class QuestionGenerator:
                     'error': '该面试间还未关联简历，请先关联简历'
                 }
 
-            # 2. 加载简历数据（使用resume_id）
+            # 2. 检查简历解析状态
+            from backend.services.resume_service import ResumeService
+            resume = ResumeService.get_resume(room.resume_id)
+            if not resume:
+                return {
+                    'success': False,
+                    'error': '关联简历不存在，请重新选择简历'
+                }
+            if resume.parse_status in {'pending', 'parsing'}:
+                return {
+                    'success': False,
+                    'error': '简历正在解析中，请稍后再生成面试题'
+                }
+            if resume.parse_status == 'failed':
+                parse_error = resume.parse_error or '未知原因'
+                return {
+                    'success': False,
+                    'error': f'简历解析失败：{parse_error}'
+                }
+
+            # 3. 加载简历结构化数据（使用resume_id）
             from backend.clients.minio_client import download_resume_data
             resume_data = download_resume_data(room.resume_id)
             if not resume_data:
                 return {
                     'success': False,
-                    'error': '简历数据未找到，请重新上传简历'
+                    'error': '简历解析结果尚未就绪，请稍后重试'
                 }
 
-            # 2. 使用 RAG 生成问题
+            # 4. 使用 RAG 生成问题
             if self.use_rag:
                 try:
                     questions_result = self._generate_questions_via_rag(

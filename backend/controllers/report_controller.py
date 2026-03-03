@@ -4,10 +4,13 @@
 """
 
 from flask import Blueprint, Response
-from backend.services.interview_service import RoundService
+from backend.services.interview_service import RoundService, SessionService
 from backend.common.response import ApiResponse
 from backend.common.middleware import require_auth, require_resource_owner
-from backend.clients.minio_client import minio_client
+from backend.clients.minio_client import (
+    minio_client,
+    download_evaluation_report,
+)
 from backend.common.logger import get_logger
 
 logger = get_logger(__name__)
@@ -26,14 +29,16 @@ def generate_report(session_id, round_index):
     try:
         from backend.services.evaluation_service import get_evaluation_service
         from backend.services.pdf import get_pdf_generator
-        from backend.services.interview_service import SessionService
 
         # 更新会话状态为 analyzing
         session = SessionService.get_session(session_id)
-        if session:
-            session.status = 'analyzing'
-            session.save()
-            logger.info(f"Session {session_id} status updated to analyzing for round {round_index}")
+        if not session:
+            return ApiResponse.not_found("面试会话")
+
+        room_id = session.room.id
+        session.status = 'analyzing'
+        session.save()
+        logger.info(f"Session {session_id} status updated to analyzing for round {round_index}")
 
         # 生成评价数据
         evaluation_service = get_evaluation_service()
@@ -50,7 +55,7 @@ def generate_report(session_id, round_index):
             return ApiResponse.error('PDF生成失败')
 
         # 保存PDF到MinIO
-        pdf_filename = pdf_generator.save_pdf_to_minio(pdf_bytes, session_id, round_index)
+        pdf_filename = pdf_generator.save_pdf_to_minio(pdf_bytes, room_id, session_id, round_index)
 
         if not pdf_filename:
             return ApiResponse.error('PDF保存失败')
@@ -80,11 +85,18 @@ def get_report(session_id, round_index):
     logger.debug(f"Getting report for session: {session_id}, round: {round_index}")
 
     try:
-        evaluation_filename = f"reports/evaluation_{round_index}_{session_id}.json"
-        evaluation_data = minio_client.download_json(evaluation_filename)
+        session = SessionService.get_session(session_id)
+        if not session:
+            return ApiResponse.not_found("面试会话")
 
-        pdf_filename = f"reports/interview_report_{round_index}_{session_id}.pdf"
-        pdf_exists = pdf_filename in minio_client.list_objects(prefix="reports/")
+        room_id = session.room.id
+        evaluation_filename = (
+            f"rooms/{room_id}/sessions/{session_id}/reports/evaluation_{round_index}.json"
+        )
+        evaluation_data = download_evaluation_report(room_id, session_id, round_index)
+
+        pdf_filename = f"rooms/{room_id}/sessions/{session_id}/reports/report_{round_index}.pdf"
+        pdf_exists = minio_client.object_exists(pdf_filename)
 
         if evaluation_data:
             return ApiResponse.success(data={
@@ -109,7 +121,12 @@ def download_report_pdf(session_id, round_index):
     logger.debug(f"Downloading report PDF for session: {session_id}, round: {round_index}")
 
     try:
-        pdf_filename = f"reports/interview_report_{round_index}_{session_id}.pdf"
+        session = SessionService.get_session(session_id)
+        if not session:
+            return ApiResponse.not_found("面试会话")
+
+        room_id = session.room.id
+        pdf_filename = f"rooms/{room_id}/sessions/{session_id}/reports/report_{round_index}.pdf"
 
         # 从MinIO下载PDF文件
         pdf_object = minio_client.client.get_object(minio_client.bucket_name, pdf_filename)
@@ -136,6 +153,11 @@ def list_session_reports(session_id):
     logger.debug(f"Listing reports for session: {session_id}")
 
     try:
+        session = SessionService.get_session(session_id)
+        if not session:
+            return ApiResponse.not_found("面试会话")
+
+        room_id = session.room.id
         rounds = RoundService.get_rounds_by_session(session_id)
         reports = []
 
@@ -143,12 +165,16 @@ def list_session_reports(session_id):
             round_index = round_obj.round_index
 
             # 检查评价报告
-            evaluation_filename = f"reports/evaluation_{round_index}_{session_id}.json"
-            evaluation_exists = evaluation_filename in minio_client.list_objects(prefix="reports/")
+            evaluation_filename = (
+                f"rooms/{room_id}/sessions/{session_id}/reports/evaluation_{round_index}.json"
+            )
+            evaluation_exists = minio_client.object_exists(evaluation_filename)
 
             # 检查PDF报告
-            pdf_filename = f"reports/interview_report_{round_index}_{session_id}.pdf"
-            pdf_exists = pdf_filename in minio_client.list_objects(prefix="reports/")
+            pdf_filename = (
+                f"rooms/{room_id}/sessions/{session_id}/reports/report_{round_index}.pdf"
+            )
+            pdf_exists = minio_client.object_exists(pdf_filename)
 
             if evaluation_exists or pdf_exists:
                 reports.append({

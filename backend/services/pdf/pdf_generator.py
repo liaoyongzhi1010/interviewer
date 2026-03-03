@@ -170,12 +170,19 @@ class PDFReportGenerator:
 
             story.append(Spacer(1, 15))
 
-    def save_pdf_to_minio(self, pdf_bytes: bytes, session_id: str, round_index: int) -> Optional[str]:
+    def save_pdf_to_minio(
+        self,
+        pdf_bytes: bytes,
+        room_id: str,
+        session_id: str,
+        round_index: int
+    ) -> Optional[str]:
         """
         保存PDF到MinIO
 
         Args:
             pdf_bytes: PDF字节流
+            room_id: 面试间ID
             session_id: 会话ID
             round_index: 轮次索引
 
@@ -183,7 +190,7 @@ class PDFReportGenerator:
             保存的文件名，失败返回None
         """
         try:
-            filename = f"reports/interview_report_{round_index}_{session_id}.pdf"
+            filename = f"rooms/{room_id}/sessions/{session_id}/reports/report_{round_index}.pdf"
             pdf_stream = io.BytesIO(pdf_bytes)
 
             # 上传到MinIO
