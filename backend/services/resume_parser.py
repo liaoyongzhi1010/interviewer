@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 
 
 class ResumeParser:
-    """简历内容解析器，从Markdown提取结构化数据"""
+    """简历内容解析器，从文本标记内容提取结构化数据"""
 
     def __init__(self):
         self.qwen_client = QwenClient()
@@ -21,10 +21,10 @@ class ResumeParser:
 
     def extract_resume_data(self, markdown_content: str) -> Optional[Dict[str, Any]]:
         """
-        从Markdown内容中提取结构化简历数据
+        从文本标记内容中提取结构化简历数据
 
         Args:
-            markdown_content: OCR解析后的Markdown格式内容
+            markdown_content: 文档识别后的文本标记内容
 
         Returns:
             结构化简历数据字典，格式：
@@ -46,7 +46,7 @@ class ResumeParser:
             # 生成提取提示词
             prompt = get_resume_extraction_prompt(markdown_content)
 
-            # 调用LLM提取结构化数据
+            # 调用大模型提取结构化数据
             messages = [{"role": "user", "content": prompt}]
             response = self.qwen_client.chat_completion(messages, temperature=0.3, max_tokens=2000)
 
@@ -55,7 +55,7 @@ class ResumeParser:
                 self.last_error = "Qwen 未返回内容，请稍后重试"
                 return None
 
-            # 解析JSON响应
+            # 解析结构化响应
             resume_data = self._parse_json_response(response)
 
             if not resume_data:
@@ -100,12 +100,12 @@ class ResumeParser:
         return f"简历结构化提取失败：{error_text}"
 
     def _parse_json_response(self, response: str) -> Optional[Dict[str, Any]]:
-        """解析LLM返回的JSON响应"""
+        """解析大模型返回的结构化响应"""
         try:
-            # 清理响应内容，移除可能的markdown代码块标记
+            # 清理响应内容，移除可能的代码块标记
             cleaned_response = response.strip()
 
-            # 移除```json 和 ```标记
+            # 移除代码块包裹标记
             if cleaned_response.startswith('```'):
                 # 找到第一个{和最后一个}
                 start_idx = cleaned_response.find('{')
@@ -113,7 +113,7 @@ class ResumeParser:
                 if start_idx != -1 and end_idx != -1:
                     cleaned_response = cleaned_response[start_idx:end_idx + 1]
 
-            # 尝试解析JSON
+            # 尝试解析结构化文本
             resume_data = json.loads(cleaned_response)
             return resume_data
 
@@ -121,7 +121,7 @@ class ResumeParser:
             logger.error(f"JSON decode error: {e}")
             logger.debug(f"Response content: {response[:500]}")
 
-            # 尝试使用正则表达式提取JSON对象
+            # 尝试使用正则表达式提取对象内容
             try:
                 json_match = re.search(r'\{.*\}', response, re.DOTALL)
                 if json_match:

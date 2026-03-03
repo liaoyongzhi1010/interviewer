@@ -357,7 +357,7 @@ async function deleteRoom(roomId) {
     try {
         showToast('info', '正在删除面试间...');
 
-        const result = await ApiClient.delete(`/api/rooms/${roomId}`);
+        const result = await ApiClient.delete(`/api/v1/rooms/${roomId}`);
 
         if (result.success) {
             showToast('success', '面试间删除成功');
@@ -384,7 +384,7 @@ async function deleteSession(sessionId) {
     try {
         showToast('info', '正在删除面试会话...');
 
-        const result = await ApiClient.delete(`/api/sessions/${sessionId}`);
+        const result = await ApiClient.delete(`/api/v1/sessions/${sessionId}`);
 
         if (result.success) {
             showToast('success', '面试会话删除成功');

@@ -1,6 +1,6 @@
 """
 简历异步解析服务
-将上传与OCR/LLM解析解耦，避免上传主链路被外部服务阻塞
+将上传与识别/结构化提取解耦，避免上传主链路被外部服务阻塞
 """
 
 import os
@@ -55,13 +55,13 @@ def submit_resume_parse_task(resume_id: str) -> bool:
 
 
 def _mark_task_done(resume_id: str) -> None:
-    """标记任务完成，释放in-flight状态"""
+    """标记任务完成，释放进行中状态"""
     with _inflight_lock:
         _inflight_tasks.discard(resume_id)
 
 
 def _parse_resume_job(resume_id: str) -> None:
-    """后台任务：获取原始PDF预签名URL -> OCR -> 结构化提取 -> 保存结果"""
+    """后台任务：获取原始简历访问链接 -> 文档识别 -> 结构化提取 -> 保存结果"""
 
     try:
         resume = ResumeService.get_resume(resume_id)
@@ -71,7 +71,7 @@ def _parse_resume_job(resume_id: str) -> None:
 
         ResumeService.update_parse_status(resume_id, parse_status='parsing', parse_error=None)
 
-        # 直接使用原始PDF预签名链接，避免本地临时文件和二次上传中转
+        # 直接使用原始简历预签名链接，避免本地临时文件和二次上传中转
         pdf_url = get_resume_pdf_url(resume_id, expires_hours=24)
         if not pdf_url:
             _fail_parse(resume_id, "获取原始PDF访问链接失败，请重新上传简历")
@@ -95,7 +95,7 @@ def _parse_resume_job(resume_id: str) -> None:
             )
             return
 
-        # 以用户输入为准覆盖company/position
+        # 以用户输入为准覆盖公司和岗位
         if resume.company:
             structured_data['company'] = resume.company
         if resume.position:

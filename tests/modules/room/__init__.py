@@ -1,1 +1,0 @@
-"""Room module functional tests."""

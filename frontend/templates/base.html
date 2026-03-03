@@ -72,9 +72,14 @@
                 <ul class="navbar-nav">
                     <!-- 钱包连接按钮 -->
                     <li class="nav-item" id="walletSection">
-                        <button class="btn btn-primary btn-sm" id="connectWalletBtn" style="border-radius: 10px; padding: 0.5rem 1.25rem; font-weight: 600;">
-                            <i class="fas fa-wallet me-2"></i>连接钱包
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm guest-login-btn" type="button" style="border-radius: 10px; padding: 0.5rem 1.1rem; font-weight: 600;">
+                                <i class="fas fa-user me-2"></i>游客体验
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm wallet-login-btn" id="connectWalletBtn" style="border-radius: 10px; padding: 0.5rem 1.1rem; font-weight: 600;">
+                                <i class="fas fa-wallet me-2"></i>连接钱包
+                            </button>
+                        </div>
                         <div class="d-none align-items-center" id="walletInfo">
                             <span class="navbar-text me-3" style="padding: 0.5rem 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;">
                                 <i class="fas fa-check-circle me-2"></i>
@@ -126,15 +131,17 @@
 
                 // 显示提示
                 if (window.YeyingInterviewer && window.YeyingInterviewer.showToast) {
-                    window.YeyingInterviewer.showToast('warning', '请先连接钱包登录');
+                    window.YeyingInterviewer.showToast('warning', '请先登录（连接钱包或游客体验）');
                 } else {
-                    console.log('[warning] 请先连接钱包登录');
+                    console.log('[warning] 请先登录（连接钱包或游客体验）');
                 }
 
-                // 触发连接钱包按钮点击
+                // 高亮登录入口按钮
                 $('#connectWalletBtn').addClass('btn-pulse');
+                $('.guest-login-btn').addClass('btn-pulse');
                 setTimeout(function() {
                     $('#connectWalletBtn').removeClass('btn-pulse');
+                    $('.guest-login-btn').removeClass('btn-pulse');
                 }, 2000);
             }
         });

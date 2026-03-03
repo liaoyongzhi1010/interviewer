@@ -21,6 +21,15 @@
                     <p class="lead mb-5" style="font-size: 1.35rem; color: var(--text-secondary); max-width: 700px; margin-left: auto; margin-right: auto; line-height: 1.8;">
                         让每一次面试准备都更加高效专业
                     </p>
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mb-4">
+                        <button class="btn btn-outline-primary btn-lg px-4 guest-login-btn" type="button">
+                            <i class="fas fa-user me-2"></i>游客体验
+                        </button>
+                        <button class="btn btn-outline-primary btn-lg px-4 wallet-login-btn" onclick="document.getElementById('connectWalletBtn').click()">
+                            <i class="fas fa-wallet me-2"></i>连接钱包
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -125,7 +134,7 @@
                                         <span>数字人面试官</span>
                                     </li>
                                 </ul>
-                                <button class="btn btn-outline-light w-100" onclick="document.getElementById('connectWalletBtn').click()" style="padding: 0.875rem; font-weight: 600; border-width: 2px;">
+                                <button class="btn btn-outline-light w-100" onclick="document.querySelector('.guest-login-btn')?.click()" style="padding: 0.875rem; font-weight: 600; border-width: 2px;">
                                     开始使用
                                 </button>
                             </div>

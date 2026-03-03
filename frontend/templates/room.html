@@ -346,7 +346,7 @@ function getParseStatusDisplay(parseStatus) {
 
 async function checkResumeStatus() {
     try {
-        const response = await fetch(`/api/resume/${ROOM_ID}`);
+        const response = await fetch(`/api/v1/rooms/${ROOM_ID}/resume`);
         const result = await response.json();
 
         const statusAlert = document.getElementById('resumeStatusAlert');
@@ -455,7 +455,7 @@ async function uploadJD() {
     try {
         YeyingInterviewer.showToast('info', '正在上传 JD...');
 
-        const response = await fetch(`/upload_jd/${ROOM_ID}`, {
+        const response = await fetch(`/api/v1/upload_jd/${ROOM_ID}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -512,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 加载简历列表供选择
     function loadResumesForRoomUpdate() {
         $.ajax({
-            url: '/api/resumes',
+            url: '/api/v1/resumes',
             method: 'GET',
             success: function(response) {
                 if (response.code === 200) {
@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // 发送更新请求
         $.ajax({
-            url: `/api/rooms/${ROOM_ID}/resume`,
+            url: `/api/v1/rooms/${ROOM_ID}/resume`,
             method: 'PUT',
             contentType: 'application/json',
             data: JSON.stringify({

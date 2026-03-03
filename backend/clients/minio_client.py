@@ -1,5 +1,5 @@
 """
-MinIO客户端工具模块
+对象存储客户端工具模块
 """
 
 import json
@@ -17,10 +17,10 @@ logger = get_logger(__name__)
 
 
 class MinIOClient:
-    """MinIO对象存储客户端"""
+    """对象存储客户端"""
 
     def __init__(self):
-        """初始化MinIO客户端"""
+        """初始化对象存储客户端"""
         # 从环境变量读取配置
         self.endpoint = os.getenv('MINIO_ENDPOINT', 'test-minio.yeying.pub')
         self.access_key = os.getenv('MINIO_ACCESS_KEY')
@@ -35,7 +35,7 @@ class MinIOClient:
                 "Please set MINIO_ACCESS_KEY and MINIO_SECRET_KEY environment variables."
             )
 
-        # 初始化MinIO客户端
+        # 初始化对象存储客户端
         self.client = Minio(
             self.endpoint,
             access_key=self.access_key,
@@ -43,11 +43,11 @@ class MinIOClient:
             secure=self.secure
         )
 
-        # 确保bucket存在
+        # 确保存储桶存在
         self._ensure_bucket()
     
     def _ensure_bucket(self) -> None:
-        """确保bucket存在，不存在则创建"""
+        """确保存储桶存在，不存在则创建"""
         try:
             if not self.client.bucket_exists(self.bucket_name):
                 self.client.make_bucket(self.bucket_name)
@@ -62,7 +62,7 @@ class MinIOClient:
             json_data = json.dumps(data, ensure_ascii=False, indent=2)
             json_bytes = json_data.encode('utf-8')
             
-            # 使用BytesIO而不是StringIO
+            # 使用字节流上传，避免文本流编码问题
             from io import BytesIO
             data_stream = BytesIO(json_bytes)
             
@@ -204,7 +204,7 @@ class MinIOClient:
             return None
 
 
-# 全局MinIO客户端实例
+# 全局对象存储客户端实例
 minio_client = MinIOClient()
 
 

@@ -1,6 +1,6 @@
 """
-PDF样式和字体配置
-负责PDF文档的样式定义和字体设置
+报告文档样式和字体配置
+负责文档的样式定义和字体设置
 """
 
 import os
@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 
 class PDFStyleManager:
-    """PDF样式管理器"""
+    """报告样式管理器"""
 
     def __init__(self):
         self.default_font = self._setup_fonts()
@@ -61,7 +61,7 @@ class PDFStyleManager:
 
     def _create_styles(self):
         """
-        创建PDF样式集合
+        创建报告文档样式集合
 
         Returns:
             样式字典

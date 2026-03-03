@@ -5,9 +5,28 @@
 // 全局变量
 let wallet = null;
 let currentAccount = null;
+let currentLoginType = null;
 
 // API 地址
 const API_BASE = window.location.origin + '/api/v1';
+
+function isGuestAccount(address) {
+    return typeof address === 'string' && address.toLowerCase().startsWith('guest_');
+}
+
+function clearLocalAuthState() {
+    currentAccount = null;
+    currentLoginType = null;
+    localStorage.removeItem('wallet_address');
+    localStorage.removeItem('auth_login_type');
+}
+
+async function logoutFromServer() {
+    await fetch(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
 
 /**
  * 等待钱包注入
@@ -82,11 +101,11 @@ async function performWalletLogin() {
         }
 
         const challengeData = await challengeRes.json();
-        if (!challengeData.body || !challengeData.body.result) {
+        if (!challengeData.success || !challengeData.data || !challengeData.data.challenge) {
             throw new Error('挑战数据格式错误');
         }
 
-        const challenge = challengeData.body.result;
+        const challenge = challengeData.data.challenge;
         console.log('获取挑战成功');
 
         // 3. 签名挑战
@@ -141,12 +160,14 @@ async function performWalletLogin() {
         }
 
         const verifyData = await verifyRes.json();
-        if (!verifyData.body) {
+        if (!verifyData.success) {
             throw new Error('验证响应格式错误');
         }
 
         // 5. 仅保存地址用于界面展示，鉴权由 HttpOnly Cookie 承担
         localStorage.setItem('wallet_address', address);
+        localStorage.setItem('auth_login_type', 'wallet');
+        currentLoginType = 'wallet';
 
         console.log('登录成功！');
 
@@ -159,10 +180,45 @@ async function performWalletLogin() {
 }
 
 /**
+ * 游客登录流程（免钱包）
+ */
+async function performGuestLogin() {
+    try {
+        const loginRes = await fetch(`${API_BASE}/auth/guest-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!loginRes.ok) {
+            throw new Error(`游客登录失败: ${loginRes.status}`);
+        }
+
+        const loginData = await loginRes.json();
+        const guestAddress = loginData?.data?.address;
+        if (!guestAddress) {
+            throw new Error('游客登录响应格式错误');
+        }
+
+        currentAccount = guestAddress;
+        currentLoginType = 'guest';
+        localStorage.setItem('wallet_address', guestAddress);
+        localStorage.setItem('auth_login_type', 'guest');
+
+        return { address: guestAddress };
+    } catch (error) {
+        console.error('游客登录失败:', error);
+        throw error;
+    }
+}
+
+/**
  * 格式化地址显示
  */
 function formatAddress(address) {
     if (!address) return '';
+    if (isGuestAccount(address)) {
+        return `游客-${address.substring(address.length - 4).toUpperCase()}`;
+    }
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 }
 
@@ -222,6 +278,10 @@ $(document).ready(async function() {
     const savedAddress = localStorage.getItem('wallet_address');
     if (savedAddress) {
         currentAccount = savedAddress;
+        const savedLoginType = localStorage.getItem('auth_login_type')
+            || (isGuestAccount(savedAddress) ? 'guest' : 'wallet');
+        currentLoginType = savedLoginType;
+        localStorage.setItem('auth_login_type', savedLoginType);
         updateWalletUI(true);
         console.log('已恢复登录状态');
     }
@@ -233,7 +293,7 @@ $(document).ready(async function() {
 
         // 检查钱包是否就绪
         if (!wallet) {
-            showToast('error', '未检测到夜莺钱包，请确保已安装并启用');
+            showToast('error', '未检测到夜莺钱包，可直接点击“游客体验”进入');
             return;
         }
 
@@ -243,7 +303,7 @@ $(document).ready(async function() {
             $btn.html('<span class="spinner-border spinner-border-sm me-1"></span>连接中...');
 
             // 执行登录
-            const result = await performWalletLogin();
+            await performWalletLogin();
 
             // 更新 UI
             updateWalletUI(true);
@@ -277,21 +337,35 @@ $(document).ready(async function() {
         }
     });
 
+    // 绑定游客体验按钮
+    $('.guest-login-btn').on('click', async function() {
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+
+        try {
+            $btn.prop('disabled', true);
+            $btn.html('<span class="spinner-border spinner-border-sm me-1"></span>进入中...');
+
+            await performGuestLogin();
+            updateWalletUI(true);
+            showToast('success', '已进入游客模式');
+            $(document).trigger('wallet:login:success');
+        } catch (error) {
+            $btn.prop('disabled', false);
+            $btn.html(originalHtml);
+            showToast('error', error.message || '游客登录失败，请重试');
+        }
+    });
+
     // 绑定退出按钮
     $('#logoutBtn').on('click', async function() {
         try {
-            // 调用后端退出接口清除Cookie
-            await fetch(`${API_BASE}/auth/logout`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
+            await logoutFromServer();
         } catch (error) {
             console.error('调用退出接口失败:', error);
         }
 
-        // 清除本地登录状态
-        currentAccount = null;
-        localStorage.removeItem('wallet_address');
+        clearLocalAuthState();
 
         console.log('已退出登录');
 
@@ -302,31 +376,26 @@ $(document).ready(async function() {
     // 监听钱包事件
     if (wallet) {
         wallet.on('accountsChanged', (accounts) => {
+            if (currentLoginType !== 'wallet') {
+                return;
+            }
             console.log('账户已切换:', accounts);
             if (accounts.length === 0) {
                 // 断开连接 - 清除所有状态并刷新
-                currentAccount = null;
-                localStorage.removeItem('wallet_address');
+                clearLocalAuthState();
 
                 // 调用后端清除Cookie
-                fetch(`${API_BASE}/auth/logout`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                }).catch(err => console.error('清除Cookie失败:', err));
+                logoutFromServer().catch(err => console.error('清除Cookie失败:', err));
 
                 // 刷新页面
                 window.location.href = '/';
             } else if (accounts[0] !== currentAccount) {
                 // 切换账户 - 需要重新登录
                 console.log('检测到账户切换，需要重新登录');
-                currentAccount = null;
-                localStorage.removeItem('wallet_address');
+                clearLocalAuthState();
 
                 // 调用后端清除Cookie
-                fetch(`${API_BASE}/auth/logout`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                }).catch(err => console.error('清除Cookie失败:', err));
+                logoutFromServer().catch(err => console.error('清除Cookie失败:', err));
 
                 // 刷新页面
                 window.location.href = '/';
@@ -334,6 +403,9 @@ $(document).ready(async function() {
         });
 
         wallet.on('chainChanged', (chainId) => {
+            if (currentLoginType !== 'wallet') {
+                return;
+            }
             console.log('链已切换:', chainId);
             // 建议刷新页面
             window.location.reload();
@@ -345,5 +417,6 @@ $(document).ready(async function() {
 window.walletDebug = {
     wallet,
     currentAccount,
+    currentLoginType,
     getAddress: () => currentAccount
 };

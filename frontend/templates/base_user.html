@@ -121,6 +121,9 @@
         if (savedAddress) {
             const formatAddress = (addr) => {
                 if (!addr) return '';
+                if (addr.toLowerCase().startsWith('guest_')) {
+                    return `游客-${addr.substring(addr.length - 4).toUpperCase()}`;
+                }
                 return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
             };
             $('#walletAddress').text(formatAddress(savedAddress));

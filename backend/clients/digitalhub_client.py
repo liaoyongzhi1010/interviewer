@@ -1,5 +1,5 @@
 """
-DigitalHub数字人服务客户端
+数字人服务客户端
 """
 
 import os
@@ -9,11 +9,10 @@ from backend.common.logger import get_logger
 
 logger = get_logger(__name__)
 
-# DIGITALHUB_BASE = os.getenv("DIGITALHUB_BASE", "http://127.0.0.1:9009")
 DIGITALHUB_BASE = os.getenv("DIGITALHUB_BASE", "https://digitalhub.yeying.pub")
 
 def ping_dh() -> Dict[str, Any]:
-    """Ping数字人服务"""
+    """探活数字人服务"""
     try:
         r = requests.get(f"{DIGITALHUB_BASE}/api/v1/dh/ping", timeout=3)
         r.raise_for_status()
@@ -42,7 +41,7 @@ def start_llm(room_id: str, session_id: str, round_index: int, *,
               port: int,
               minio_endpoint: str, minio_access_key: str, minio_secret_key: str,
               minio_bucket: str, minio_secure: bool = True) -> Dict[str, Any]:
-    """启动LLM服务"""
+    """启动大模型服务"""
     payload = {
         "room_id": room_id,
         "session_id": session_id,
@@ -59,8 +58,6 @@ def start_llm(room_id: str, session_id: str, round_index: int, *,
     data = r.json()
     logger.info(f"LLM start: {data}")
     return data
-
-
 
 
 

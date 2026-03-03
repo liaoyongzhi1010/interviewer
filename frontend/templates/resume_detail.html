@@ -326,7 +326,7 @@ $(document).ready(function() {
 
     function pollParseStatus() {
         $.ajax({
-            url: `/api/resumes/${resumeId}`,
+            url: `/api/v1/resumes/${resumeId}`,
             method: 'GET',
             success: function(response) {
                 if (response.code !== 200) {
@@ -379,7 +379,7 @@ $(document).ready(function() {
         }
 
         $.ajax({
-            url: `/api/resumes/${resumeId}`,
+            url: `/api/v1/resumes/${resumeId}`,
             method: 'PUT',
             contentType: 'application/json',
             data: JSON.stringify({
@@ -407,7 +407,7 @@ $(document).ready(function() {
         }
 
         $.ajax({
-            url: `/api/resumes/${resumeId}`,
+            url: `/api/v1/resumes/${resumeId}`,
             method: 'DELETE',
             success: function(response) {
                 if (response.code === 200) {

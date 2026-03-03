@@ -268,7 +268,7 @@ function updateSessionStatus(status, statusDisplay) {
 async function refreshSessionStatus() {
     try {
         console.log('🔍 Fetching session status from server...');
-        const response = await fetch(`/api/session/${SESSION_ID}/status`);
+        const response = await fetch(`/api/v1/session/${SESSION_ID}/status`);
         if (response.ok) {
             const data = await response.json();
             console.log('📥 Received status data:', data);
@@ -288,7 +288,7 @@ async function refreshSessionStatus() {
 // 获取当前轮次数量
 async function getCurrentRoundCount() {
     try {
-        const response = await fetch(`/api/session/${SESSION_ID}/status`);
+        const response = await fetch(`/api/v1/session/${SESSION_ID}/status`);
         if (response.ok) {
             const data = await response.json();
             if (data.success && data.data) {
@@ -304,7 +304,7 @@ async function getCurrentRoundCount() {
 // 异步加载数字人
 async function loadDigitalHuman() {
     try {
-        const response = await fetch(`/api/session/${SESSION_ID}/boot_dh`, {
+        const response = await fetch(`/api/v1/session/${SESSION_ID}/boot_dh`, {
             method: 'POST'
         });
         const result = await response.json();
@@ -327,7 +327,7 @@ async function loadSessionRounds() {
     if (roundsLoaded) return; // 避免重复加载
 
     try {
-        const response = await fetch(`/api/session/${SESSION_ID}/rounds`);
+        const response = await fetch(`/api/v1/session/${SESSION_ID}/rounds`);
         const result = await response.json();
 
         if (result.success && result.data && result.data.length > 0) {
@@ -487,7 +487,7 @@ async function generateQuestions() {
 
     try {
         // 先检查是否有简历数据
-        const resumeCheckResponse = await fetch(`/api/resume/${ROOM_ID}`);
+        const resumeCheckResponse = await fetch(`/api/v1/rooms/${ROOM_ID}/resume`);
         const resumeCheck = await resumeCheckResponse.json();
 
         if (!resumeCheck.success || !resumeCheck.data || !resumeCheck.data.resume) {
@@ -509,7 +509,7 @@ async function generateQuestions() {
         console.log('🚀 立即显示"出题中"状态');
 
         // 发送请求
-        const response = await fetch(`/generate_questions/${SESSION_ID}`, {
+        const response = await fetch(`/api/v1/generate_questions/${SESSION_ID}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
@@ -562,7 +562,7 @@ async function loadCurrentQuestion() {
     if (!currentRoundId) return;
 
     try {
-        const response = await fetch(`/get_current_question/${currentRoundId}`);
+        const response = await fetch(`/api/v1/get_current_question/${currentRoundId}`);
         const data = await response.json();
 
         if (data.success && data.data && data.data.question_data) {
@@ -601,7 +601,7 @@ async function loadCurrentQuestion() {
 // 保存用户回答
 async function saveAnswer(qaId, answerText) {
     try {
-        const response = await fetch('/save_answer', {
+        const response = await fetch('/api/v1/save_answer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ qa_id: qaId, answer_text: answerText })
@@ -610,8 +610,9 @@ async function saveAnswer(qaId, answerText) {
         const data = await response.json();
 
         if (data.success) {
+            const saveData = data.data || {};
             setTimeout(() => {
-                if (data.is_round_completed) {
+                if (saveData.is_round_completed) {
                     addMessage('ai', '✅ 回答已保存！🎉 您已完成本轮所有面试题，表现出色！');
                     currentQuestionData = null;
 
@@ -621,7 +622,7 @@ async function saveAnswer(qaId, answerText) {
                     // 🆕 动态显示报告生成按钮
                     showReportButtons();
                 } else {
-                    addMessage('ai', `✅ 回答已保存！还有 ${data.remaining_questions} 道题，让我们继续下一题。`);
+                    addMessage('ai', `✅ 回答已保存！还有 ${saveData.remaining_questions} 道题，让我们继续下一题。`);
                     setTimeout(() => loadCurrentQuestion(), 1000);
                 }
             }, 500);
@@ -722,7 +723,7 @@ async function generateRoundReport(sessionId, roundIndex) {
         console.log('🚀 立即显示"分析中"状态');
 
         // 发送请求
-        const response = await fetch(`/api/generate_report/${sessionId}/${roundIndex}`, {
+        const response = await fetch(`/api/v1/generate_report/${sessionId}/${roundIndex}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
@@ -883,7 +884,7 @@ function resetReportSteps() {
 // 查看轮次报告
 async function viewRoundReport(sessionId, roundIndex) {
     try {
-        const response = await fetch(`/api/reports/${sessionId}/${roundIndex}`);
+        const response = await fetch(`/api/v1/reports/${sessionId}/${roundIndex}`);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -907,7 +908,7 @@ async function viewRoundReport(sessionId, roundIndex) {
 // 下载轮次报告PDF
 async function downloadRoundReport(sessionId, roundIndex) {
     try {
-        const downloadUrl = `/api/reports/download/${sessionId}/${roundIndex}`;
+        const downloadUrl = `/api/v1/reports/download/${sessionId}/${roundIndex}`;
 
         // 创建一个临时的下载链接
         const link = document.createElement('a');
@@ -1046,7 +1047,7 @@ function getScoreBadgeColor(score) {
 // 检查已有报告状态
 async function checkExistingReports() {
     try {
-        const response = await fetch(`/api/reports/list/${SESSION_ID}`);
+        const response = await fetch(`/api/v1/reports/list/${SESSION_ID}`);
 
         if (!response.ok) {
             console.warn(`Failed to fetch reports list: HTTP ${response.status}`);

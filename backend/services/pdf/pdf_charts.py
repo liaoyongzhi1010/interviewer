@@ -1,6 +1,6 @@
 """
-PDF图表和可视化组件
-负责生成PDF中的表格、图表等可视化元素
+报告文档图表和可视化组件
+负责生成文档中的表格、图表等可视化元素
 """
 
 from typing import Dict, Any
@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 
 
 class PDFChartGenerator:
-    """PDF图表生成器"""
+    """报告图表生成器"""
 
     def __init__(self, default_font: str = 'Helvetica'):
         self.default_font = default_font
@@ -26,7 +26,7 @@ class PDFChartGenerator:
             analysis: 分析数据字典
 
         Returns:
-            Table对象
+            表格对象
         """
         score_data = [
             ['维度', '得分'],
@@ -59,7 +59,7 @@ class PDFChartGenerator:
             header: 报告头部信息
 
         Returns:
-            Table对象
+            表格对象
         """
         info_data = [
             ['报告生成时间:', header.get('generated_time', '')],
@@ -87,7 +87,7 @@ class PDFChartGenerator:
             level: 等级（低/中/高）
 
         Returns:
-            Table对象
+            表格对象
         """
         level_data = [['', '低', '中', '高'], [item_name, '', '', '']]
 

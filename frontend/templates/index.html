@@ -684,7 +684,7 @@ $(document).ready(function() {
         showToast('info', '正在上传简历并提交解析任务...');
 
         $.ajax({
-            url: '/api/resumes/upload',
+            url: '/api/v1/resumes/upload',
             method: 'POST',
             data: formData,
             processData: false,
@@ -808,7 +808,7 @@ $(document).ready(function() {
 
     function pollResumeStatus() {
         $.ajax({
-            url: '/api/resumes',
+            url: '/api/v1/resumes',
             method: 'GET',
             success: function(response) {
                 if (response.code !== 200) {
@@ -946,7 +946,7 @@ $(document).ready(function() {
     // 加载简历列表供选择
     function loadResumesForSelection() {
         $.ajax({
-            url: '/api/resumes',
+            url: '/api/v1/resumes',
             method: 'GET',
             success: function(response) {
                 if (response.code === 200) {
@@ -1034,7 +1034,7 @@ $(document).ready(function() {
 
         // 发送创建请求
         $.ajax({
-            url: '/api/rooms/create',
+            url: '/api/v1/rooms/create',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
@@ -1075,7 +1075,7 @@ $(document).ready(function() {
         deleteRoomModal.hide();
 
         $.ajax({
-            url: `/api/rooms/${roomToDelete}`,
+            url: `/api/v1/rooms/${roomToDelete}`,
             method: 'DELETE',
             success: function(response) {
                 if (response.code === 200) {
@@ -1106,7 +1106,7 @@ $(document).ready(function() {
         renameRoomModal.hide();
 
         $.ajax({
-            url: `/api/rooms/${roomToRename}`,
+            url: `/api/v1/rooms/${roomToRename}`,
             method: 'PUT',
             contentType: 'application/json',
             data: JSON.stringify({
@@ -1137,7 +1137,7 @@ $(document).ready(function() {
         }
 
         $.ajax({
-            url: `/api/resumes/${resumeToDelete}`,
+            url: `/api/v1/resumes/${resumeToDelete}`,
             method: 'DELETE',
             success: function(response) {
                 if (response.code === 200) {
@@ -1176,7 +1176,7 @@ $(document).ready(function() {
         }
 
         $.ajax({
-            url: `/api/resumes/${resumeToRename}`,
+            url: `/api/v1/resumes/${resumeToRename}`,
             method: 'PUT',
             contentType: 'application/json',
             data: JSON.stringify({

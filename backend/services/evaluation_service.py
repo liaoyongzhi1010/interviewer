@@ -34,10 +34,10 @@ class InterviewEvaluationService:
                 raise ValueError("会话不存在")
             room_id = session.room.id
 
-            # 1. 加载QA数据
+            # 1. 加载问答数据
             qa_data = self._load_qa_data(room_id, session_id, round_index)
             if not qa_data:
-                raise ValueError("无法加载QA数据")
+                raise ValueError("无法加载问答数据")
 
             # 2. 调用大模型进行评价
             evaluation_result = self._evaluate_with_llm(qa_data)
@@ -45,7 +45,7 @@ class InterviewEvaluationService:
             # 3. 构建完整的评价报告
             report_data = self._build_evaluation_report(qa_data, evaluation_result, session_id, round_index)
 
-            # 4. 保存评价报告到MinIO
+            # 4. 保存评价报告到对象存储
             report_filename = (
                 f"rooms/{room_id}/sessions/{session_id}/reports/evaluation_{round_index}.json"
             )
@@ -69,13 +69,13 @@ class InterviewEvaluationService:
             }
 
     def _load_qa_data(self, room_id: str, session_id: str, round_index: int) -> Optional[Dict[str, Any]]:
-        """加载QA完成数据"""
+        """加载问答完成数据"""
         return download_qa_analysis(room_id, session_id, round_index)
 
     def _evaluate_with_llm(self, qa_data: Dict[str, Any]) -> Dict[str, Any]:
-        """使用大模型评价QA数据"""
+        """使用大模型评价问答数据"""
         try:
-            # 使用分离的prompt模板
+            # 使用独立提示词模板
             evaluation_prompt = get_interview_evaluation_prompt(qa_data)
 
             messages = [{"role": "user", "content": evaluation_prompt}]
@@ -92,14 +92,14 @@ class InterviewEvaluationService:
     def _parse_evaluation_response(self, response: str) -> Dict[str, Any]:
         """解析大模型评价响应"""
         try:
-            # 尝试提取JSON部分
+            # 尝试提取结构化片段
             response = response.strip()
             if response.startswith('```json'):
                 response = response[7:]
             if response.endswith('```'):
                 response = response[:-3]
 
-            # 解析JSON
+            # 解析结构化结果
             evaluation_data = json.loads(response)
             return evaluation_data
 

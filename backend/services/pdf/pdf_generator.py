@@ -1,6 +1,6 @@
 """
-PDF报告生成器
-基于华为面试报告样式生成PDF文件
+报告文档生成器
+基于华为面试报告样式生成文档文件
 """
 
 import io
@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 
 class PDFReportGenerator:
-    """PDF报告生成器"""
+    """报告文档生成器"""
 
     def __init__(self):
         self.style_manager = PDFStyleManager()
@@ -26,16 +26,16 @@ class PDFReportGenerator:
 
     def generate_report_pdf(self, report_data: Dict[str, Any]) -> Optional[bytes]:
         """
-        生成PDF报告
+        生成报告文档
 
         Args:
             report_data: 报告数据
 
         Returns:
-            PDF字节流，失败返回None
+            报告文档字节流，失败返回None
         """
         try:
-            # 创建PDF文档
+            # 创建报告文档
             buffer = io.BytesIO()
             doc = SimpleDocTemplate(
                 buffer,
@@ -46,14 +46,14 @@ class PDFReportGenerator:
                 rightMargin=2*cm
             )
 
-            # 构建PDF内容
+            # 构建文档内容
             story = []
             self._add_header(story, report_data)
             self._add_interviewer_comment(story, report_data)
             self._add_comprehensive_analysis(story, report_data)
             self._add_question_analysis(story, report_data)
 
-            # 生成PDF
+            # 生成文档
             doc.build(story)
             pdf_bytes = buffer.getvalue()
             buffer.close()
@@ -178,10 +178,10 @@ class PDFReportGenerator:
         round_index: int
     ) -> Optional[str]:
         """
-        保存PDF到MinIO
+        保存报告文档到对象存储
 
         Args:
-            pdf_bytes: PDF字节流
+            pdf_bytes: 报告文档字节流
             room_id: 面试间ID
             session_id: 会话ID
             round_index: 轮次索引
@@ -193,7 +193,7 @@ class PDFReportGenerator:
             filename = f"rooms/{room_id}/sessions/{session_id}/reports/report_{round_index}.pdf"
             pdf_stream = io.BytesIO(pdf_bytes)
 
-            # 上传到MinIO
+            # 上传到对象存储
             minio_client.client.put_object(
                 minio_client.bucket_name,
                 filename,

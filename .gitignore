@@ -26,7 +26,7 @@ wheels/
 *.egg
 MANIFEST
 
-# Flask
+# 旧框架缓存
 instance/
 .webassets-cache
 

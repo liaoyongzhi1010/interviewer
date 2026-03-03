@@ -1,5 +1,5 @@
 """
-MinerU PDF解析服务客户端
+MinerU 文档解析服务客户端
 """
 
 import os
@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 
 class MinerUClient:
-    """MinerU PDF OCR解析客户端"""
+    """文档识别解析客户端"""
 
     def __init__(self):
         self.api_key = os.getenv("MINERU_API_KEY")
@@ -25,7 +25,7 @@ class MinerUClient:
         if not self.api_key:
             raise ValueError("MINERU_API_KEY not found in environment variables")
 
-        # MinerU API 认证格式：Bearer + 空格 + Token
+        # 认证头格式：凭证前缀 + 空格 + 令牌
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -86,7 +86,7 @@ class MinerUClient:
                 result = response.json()
                 logger.debug(f"API Response: {result}")
 
-                # 获取task_id
+                # 获取任务编号
                 task_id = result.get('data', {}).get('task_id') or result.get('data')
                 if not task_id:
                     self.last_error = "MinerU 返回成功但未提供 task_id"
@@ -138,7 +138,7 @@ class MinerUClient:
                     logger.info(f"Parse status: {state} (attempt {attempt + 1}/{max_attempts})")
 
                 if state == 'done':
-                    # 解析完成，下载ZIP并提取markdown
+                    # 解析完成，下载压缩包并提取标记文本
                     zip_url = data.get('full_zip_url')
                     if not zip_url:
                         logger.error("No ZIP URL in response")
@@ -170,7 +170,7 @@ class MinerUClient:
             return None
 
     def _download_and_extract_zip(self, zip_url: str) -> Optional[str]:
-        """下载ZIP文件并提取markdown内容（60秒超时，最多重试3次）"""
+        """下载压缩包并提取 Markdown 内容（60 秒超时，最多重试 3 次）"""
         import io
         import zipfile
 
@@ -197,10 +197,10 @@ class MinerUClient:
 
                 logger.info(f"ZIP file downloaded ({len(response.content)} bytes)")
 
-                # 解压ZIP文件
+                # 解压压缩包
                 zip_file = zipfile.ZipFile(io.BytesIO(response.content))
 
-                # 查找markdown文件
+                # 查找标记文本文件
                 markdown_files = [f for f in zip_file.namelist() if f.endswith('.md')]
 
                 if not markdown_files:
@@ -208,7 +208,7 @@ class MinerUClient:
                     self.last_error = "解析结果中未找到 Markdown 文件"
                     return None
 
-                # 读取第一个markdown文件
+                # 读取第一个标记文本文件
                 md_filename = markdown_files[0]
                 logger.info(f"Extracting markdown from: {md_filename}")
 

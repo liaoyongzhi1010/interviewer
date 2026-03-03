@@ -308,6 +308,27 @@ main {
     box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
 }
 
+/* 登录入口按钮：游客/钱包统一椭圆胶囊底色 */
+.guest-login-btn,
+.wallet-login-btn {
+    border-radius: 999px !important;
+    border: 1px solid rgba(91, 124, 250, 0.35) !important;
+    background: rgba(91, 124, 250, 0.12) !important;
+    color: #4c63d2 !important;
+}
+
+.guest-login-btn:hover,
+.wallet-login-btn:hover {
+    background: rgba(91, 124, 250, 0.22) !important;
+    border-color: rgba(91, 124, 250, 0.55) !important;
+    color: #3f57cd !important;
+}
+
+.guest-login-btn:disabled,
+.wallet-login-btn:disabled {
+    opacity: 0.75;
+}
+
 /* 其他按钮样式 */
 .btn-light:hover {
     background: rgba(248, 250, 252, 1) !important;

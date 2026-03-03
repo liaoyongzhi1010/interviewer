@@ -1,20 +1,20 @@
 """
-PDF报告生成服务
-提供PDF报告生成功能的统一入口
+报告文档生成服务
+提供报告文档生成功能的统一入口
 """
 
 from backend.services.pdf.pdf_generator import PDFReportGenerator
 
-# 全局PDF生成器实例
+# 全局报告文档生成器实例
 _pdf_generator = None
 
 
 def get_pdf_generator() -> PDFReportGenerator:
     """
-    获取PDF生成器实例（单例模式）
+    获取报告文档生成器实例（单例模式）
 
-    Returns:
-        PDFReportGenerator实例
+    返回：
+        报告文档生成器实例
     """
     global _pdf_generator
     if _pdf_generator is None:

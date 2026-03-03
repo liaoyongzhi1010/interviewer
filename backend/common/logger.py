@@ -1,5 +1,5 @@
 """
-日志配置模块 - 提供统一的日志记录功能，支持rotation
+日志配置模块，提供统一的日志记录能力，支持日志轮转
 """
 
 import logging
@@ -10,20 +10,20 @@ from pathlib import Path
 
 def setup_logger(name: str, log_file: str = None, level=None):
     """
-    配置并返回logger实例
+    配置并返回日志记录器实例
 
     Args:
-        name: logger名称，通常使用模块名 __name__
+        name: 日志记录器名称，通常使用模块名 __name__
         log_file: 日志文件路径，如果为None则使用默认路径
         level: 日志级别，如果为None则从环境变量LOG_LEVEL读取，默认INFO
 
     Returns:
-        配置好的logger实例
+        配置好的日志记录器实例
     """
-    # 创建logger
+    # 创建日志器
     logger = logging.getLogger(name)
 
-    # 避免重复添加handler
+    # 避免重复添加处理器
     if logger.handlers:
         return logger
 
@@ -49,8 +49,8 @@ def setup_logger(name: str, log_file: str = None, level=None):
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    # 文件处理器 - 带rotation
-    # maxBytes=10MB, backupCount=5 表示最多保留5个备份文件
+    # 文件处理器，启用日志轮转
+    # 单文件上限 10 兆字节，最多保留 5 个备份文件
     file_handler = RotatingFileHandler(
         log_file,
         maxBytes=10 * 1024 * 1024,  # 10MB
@@ -74,12 +74,12 @@ def setup_logger(name: str, log_file: str = None, level=None):
 
 def get_logger(name: str):
     """
-    获取logger实例的便捷方法
+    获取日志记录器实例的便捷方法
 
     Args:
-        name: logger名称，建议使用 __name__
+        name: 日志记录器名称，建议使用 __name__
 
     Returns:
-        logger实例
+        日志记录器实例
     """
     return setup_logger(name)

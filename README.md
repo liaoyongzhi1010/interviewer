@@ -24,14 +24,33 @@ pip install -r requirements.txt
 cp .env.example .env
 # 编辑 .env 文件，填写必需的配置项
 
-# 4. 初始化数据库（首次运行）
-python app.py
+# 4. 执行数据库迁移（推荐）
+alembic upgrade head
 
 # 5. 启动应用
-python app.py
+python -m backend
+# 或
+uvicorn backend.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 访问地址：`http://localhost:8080`
+
+## 架构说明（FastAPI-first）
+
+- 运行时统一为 FastAPI：`backend/main.py` 负责应用初始化与路由装配。
+- `backend/main.py` 提供 FastAPI app factory 与 ASGI app，`backend/__main__.py` 作为本地运行入口。
+- API 路由按领域拆分在 `backend/api/routers/`，`backend/api/routes.py` 仅做聚合装配。
+- 页面渲染路由集中在 `backend/web/routes.py`。
+- 数据模型按领域拆分在 `backend/models/`（`base.py / resume.py / interview.py / bootstrap.py`）。
+- 数据库变更采用 Alembic 版本化迁移（`alembic/`），线上发布用 `alembic upgrade head` 管理 schema。
+- 鉴权与资源所有权校验放在 `backend/api/deps.py`，避免业务逻辑散落在控制器装饰器中。
+- 模板渲染使用 `backend/web/templates.py` 提供的 `url_for` 兼容层，前端模板无需大改即可迁移。
+
+## 测试
+
+```bash
+python -m unittest tests/test_fastapi_smoke.py
+```
 
 ## 配置说明
 
@@ -44,7 +63,8 @@ python app.py
 QWEN_API_KEY=sk-xxx                    # 通义千问API密钥
 
 # 应用配置
-SECRET_KEY=your-random-secret-key      # Flask应用密钥（建议使用随机字符串）
+SECRET_KEY=your-random-secret-key      # 应用密钥
+JWT_SECRET=your-jwt-secret             # JWT签名密钥（必须配置）
 
 # MinerU配置
 MINERU_API_KEY=your-mineru-key        # MinerU API密钥
@@ -63,7 +83,7 @@ MINIO_BUCKET=yeying-interviewer       # 存储桶名称
 LOG_LEVEL=INFO                        # 日志级别：DEBUG/INFO/WARNING/ERROR
 
 # 调试模式
-FLASK_DEBUG=false                     # 生产环境请设置为false
+APP_DEBUG=false                       # 生产环境请设置为false
 
 # 服务端口
 APP_PORT=8080                         # 应用监听端口

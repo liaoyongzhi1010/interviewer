@@ -2,12 +2,18 @@
 面试管理服务
 """
 
+from __future__ import annotations
+
 import json
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from backend.models.models import Room, Session, Round, RoundCompletion
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
+
 from backend.common.logger import get_logger
+from backend.models import QuestionAnswer, Room, Round, RoundCompletion, Session, SessionLocal, db_session
 
 logger = get_logger(__name__)
 
@@ -16,352 +22,389 @@ class RoomService:
     """房间管理服务"""
 
     @staticmethod
-    def create_room(name: Optional[str] = None, owner_address: Optional[str] = None, resume_id: Optional[str] = None) -> Room:
-        """创建新的面试间"""
-        from backend.clients.rag.rag_client import get_rag_client
+    def create_room(
+        name: Optional[str] = None,
+        owner_address: Optional[str] = None,
+        resume_id: Optional[str] = None,
+    ) -> Room:
+        """创建新的面试间。"""
+        from backend.clients.rag_client import get_rag_client
         from backend.services.resume_service import ResumeService
 
         room_id = str(uuid.uuid4())
 
-        # 如果没有提供名字，则根据简历生成默认名字
         if not name:
             if resume_id:
                 resume = ResumeService.get_resume(resume_id)
-                if resume:
-                    room_name = f"面试间 {resume.name}"
-                else:
-                    room_name = "面试间"
+                room_name = f"面试间 {resume.name}" if resume else "面试间"
             else:
                 room_name = "面试间"
         else:
             room_name = name
 
-        # 调用 RAG 服务创建记忆体
         try:
             rag_client = get_rag_client()
             memory_id = rag_client.create_memory(app="interviewer")
-            logger.info(f"Created RAG memory for room {room_id}: {memory_id}")
-        except Exception as e:
-            logger.error(f"Failed to create RAG memory: {e}")
-            # 如果 RAG 服务不可用，使用本地生成的 memory_id
+            logger.info("Created RAG memory for room %s: %s", room_id, memory_id)
+        except Exception as exc:
+            logger.error("Failed to create RAG memory: %s", exc)
             memory_id = f"memory_{room_id[:8]}"
 
-        room = Room.create(
+        room = Room(
             id=room_id,
             memory_id=memory_id,
             name=room_name,
             owner_address=owner_address,
-            resume_id=resume_id
+            resume_id=resume_id,
         )
-        logger.info(f"Created room {room_id} for owner {owner_address} with resume {resume_id}")
+        with db_session() as session:
+            session.add(room)
+
+        logger.info("Created room %s for owner %s with resume %s", room_id, owner_address, resume_id)
         return room
 
     @staticmethod
     def get_room(room_id: str) -> Optional[Room]:
-        """获取面试间"""
-        try:
-            return Room.get_by_id(room_id)
-        except Room.DoesNotExist:
-            return None
+        """获取面试间。"""
+        with SessionLocal() as session:
+            stmt = select(Room).where(Room.id == room_id)
+            return session.execute(stmt).scalar_one_or_none()
 
     @staticmethod
     def get_all_rooms() -> List[Room]:
-        """获取所有面试间"""
-        return list(Room.select().order_by(Room.created_at.desc()))
+        """获取所有面试间。"""
+        with SessionLocal() as session:
+            stmt = select(Room).order_by(Room.created_at.desc())
+            return list(session.execute(stmt).scalars().all())
 
     @staticmethod
     def get_rooms_by_owner(owner_address: str) -> List[Room]:
-        """获取指定用户的所有面试间"""
-        return list(Room.select().where(
-            Room.owner_address == owner_address
-        ).order_by(Room.created_at.desc()))
+        """获取指定用户的所有面试间。"""
+        with SessionLocal() as session:
+            stmt = (
+                select(Room)
+                .where(Room.owner_address == owner_address)
+                .order_by(Room.created_at.desc())
+            )
+            return list(session.execute(stmt).scalars().all())
 
     @staticmethod
     def delete_room(room_id: str) -> bool:
-        """删除面试间"""
-        try:
-            room = Room.get_by_id(room_id)
-            # 删除相关的会话和轮次
-            for session in room.sessions:
-                SessionService.delete_session(session.id)
-            room.delete_instance()
-            return True
-        except Room.DoesNotExist:
-            return False
+        """删除面试间。"""
+        session_ids: list[str] = []
+        with SessionLocal() as session:
+            room = session.get(Room, room_id)
+            if not room:
+                return False
+            session_ids = list(
+                session.execute(select(Session.id).where(Session.room_id == room_id)).scalars().all()
+            )
+
+        for session_id in session_ids:
+            SessionService.delete_session(session_id)
+
+        with db_session() as session:
+            room = session.get(Room, room_id)
+            if not room:
+                return True
+            session.delete(room)
+        return True
 
     @staticmethod
     def update_room(room_id: str, name: Optional[str] = None) -> bool:
-        """更新面试间信息"""
-        try:
-            room = Room.get_by_id(room_id)
+        """更新面试间信息。"""
+        with db_session() as session:
+            room = session.get(Room, room_id)
+            if not room:
+                logger.warning("Room not found: %s", room_id)
+                return False
             if name is not None:
                 room.name = name
-            room.save()
-            logger.info(f"Updated room: {room_id}")
-            return True
-        except Room.DoesNotExist:
-            logger.warning(f"Room not found: {room_id}")
-            return False
+        logger.info("Updated room: %s", room_id)
+        return True
 
     @staticmethod
     def update_room_resume(room_id: str, resume_id: Optional[str] = None) -> bool:
-        """更新面试间的简历"""
-        try:
-            room = Room.get_by_id(room_id)
+        """更新面试间关联简历。"""
+        with db_session() as session:
+            room = session.get(Room, room_id)
+            if not room:
+                logger.warning("Room not found: %s", room_id)
+                return False
             room.resume_id = resume_id
-            room.save()
-            logger.info(f"Updated room resume: {room_id} -> resume: {resume_id}")
-            return True
-        except Room.DoesNotExist:
-            logger.warning(f"Room not found: {room_id}")
-            return False
+        logger.info("Updated room resume: %s -> resume: %s", room_id, resume_id)
+        return True
 
     @staticmethod
     def to_dict(room: Room) -> Dict[str, Any]:
-        """将Room对象转换为字典"""
+        """将 Room 对象转换为字典。"""
         sessions = SessionService.get_sessions_by_room(room.id)
         total_rounds = 0
-
         for session in sessions:
             rounds = RoundService.get_rounds_by_session(session.id)
             total_rounds += len(rounds)
 
         return {
-            'id': room.id,
-            'memory_id': room.memory_id,
-            'name': room.name,
-            'owner_address': room.owner_address,
-            'created_at': room.created_at.isoformat(),
-            'updated_at': room.updated_at.isoformat(),
-            'sessions_count': len(sessions),
-            'rounds_count': total_rounds
+            "id": room.id,
+            "memory_id": room.memory_id,
+            "name": room.name,
+            "owner_address": room.owner_address,
+            "created_at": room.created_at.isoformat() if room.created_at else None,
+            "updated_at": room.updated_at.isoformat() if room.updated_at else None,
+            "sessions_count": len(sessions),
+            "rounds_count": total_rounds,
         }
 
 
 class SessionService:
     """会话管理服务"""
-    
+
     @staticmethod
     def create_session(room_id: str, name: Optional[str] = None) -> Optional[Session]:
-        """在指定面试间创建新的面试会话"""
-        room = RoomService.get_room(room_id)
-        if not room:
-            return None
-        
-        session_id = str(uuid.uuid4())
-        session_name = name or f"面试会话{room.sessions.count() + 1}"
-        
-        session = Session.create(
-            id=session_id,
-            name=session_name,
-            room=room
-        )
-        return session
-    
+        """在指定面试间创建新的面试会话。"""
+        with db_session() as session:
+            room = session.get(Room, room_id)
+            if not room:
+                return None
+
+            session_count = session.scalar(
+                select(func.count(Session.id)).where(Session.room_id == room_id)
+            ) or 0
+
+            interview_session = Session(
+                id=str(uuid.uuid4()),
+                name=name or f"面试会话{int(session_count) + 1}",
+                room_id=room_id,
+            )
+            session.add(interview_session)
+
+        return interview_session
+
     @staticmethod
     def get_session(session_id: str) -> Optional[Session]:
-        """获取面试会话"""
-        try:
-            return Session.get_by_id(session_id)
-        except Session.DoesNotExist:
-            return None
-    
+        """获取面试会话。"""
+        with SessionLocal() as session:
+            stmt = (
+                select(Session)
+                .where(Session.id == session_id)
+                .options(selectinload(Session.room))
+            )
+            return session.execute(stmt).scalar_one_or_none()
+
     @staticmethod
     def get_sessions_by_room(room_id: str) -> List[Session]:
-        """获取指定房间的所有会话"""
-        room = RoomService.get_room(room_id)
-        if not room:
-            return []
-        return list(room.sessions.order_by(Session.created_at.desc()))
-    
+        """获取指定房间的所有会话。"""
+        with SessionLocal() as session:
+            stmt = (
+                select(Session)
+                .where(Session.room_id == room_id)
+                .options(selectinload(Session.room))
+                .order_by(Session.created_at.desc())
+            )
+            return list(session.execute(stmt).scalars().all())
+
     @staticmethod
     def delete_session(session_id: str) -> bool:
-        """删除会话及其相关数据"""
+        """删除会话及其相关数据。"""
+        round_ids: list[str] = []
+        with SessionLocal() as session:
+            stmt = (
+                select(Session)
+                .where(Session.id == session_id)
+                .options(selectinload(Session.rounds))
+            )
+            interview_session = session.execute(stmt).scalar_one_or_none()
+            if not interview_session:
+                return False
+            round_ids = [round_obj.id for round_obj in interview_session.rounds]
+
+        for round_id in round_ids:
+            RoundService.delete_round(round_id)
+
         try:
-            session = Session.get_by_id(session_id)
+            from backend.clients.minio_client import minio_client
 
-            # 删除相关的轮次（会自动删除MinIO文件和QuestionAnswer记录）
-            for round_obj in session.rounds:
-                RoundService.delete_round(round_obj.id)
+            minio_client.delete_session_files(session_id)
+        except Exception as exc:
+            logger.warning("Failed to delete MinIO files for session %s: %s", session_id, exc)
 
-            # 删除会话目录下剩余的MinIO文件（如reports等）
-            try:
-                from backend.clients.minio_client import minio_client
-                minio_client.delete_session_files(session_id)
-            except Exception as e:
-                logger.warning(f"Failed to delete MinIO files for session {session_id}: {e}")
+        with db_session() as session:
+            interview_session = session.get(Session, session_id)
+            if interview_session:
+                session.delete(interview_session)
+        return True
 
-            # 删除会话记录
-            session.delete_instance()
-            return True
-        except Session.DoesNotExist:
-            return False
-    
     @staticmethod
     def update_session_status(session_id: str, status: str) -> bool:
-        """更新会话状态"""
-        try:
-            session = Session.get_by_id(session_id)
-            session.status = status
-            session.save()
-            return True
-        except Session.DoesNotExist:
-            return False
+        """更新会话状态。"""
+        with db_session() as session:
+            interview_session = session.get(Session, session_id)
+            if not interview_session:
+                return False
+            interview_session.status = status
+        return True
 
     @staticmethod
     def get_status_display(session: Session) -> str:
-        """获取会话状态的显示文本"""
+        """获取会话状态的显示文本。"""
         status = session.status
         current_round = session.current_round
 
-        if status == 'initialized':
-            return '初始化'
-        elif status == 'generating':
-            return f'第{current_round}轮出题中'
-        elif status == 'interviewing':
-            return f'第{current_round}轮面试中'
-        elif status == 'analyzing':
-            return f'第{current_round}轮分析中'
-        elif status == 'round_completed':
-            return f'第{current_round}轮已完成'
-        else:
-            return '未知状态'
+        if status == "initialized":
+            return "初始化"
+        if status == "generating":
+            return f"第{current_round}轮出题中"
+        if status == "interviewing":
+            return f"第{current_round}轮面试中"
+        if status == "analyzing":
+            return f"第{current_round}轮分析中"
+        if status == "round_completed":
+            return f"第{current_round}轮已完成"
+        return "未知状态"
 
     @staticmethod
     def to_dict(session: Session) -> Dict[str, Any]:
-        """将Session对象转换为字典"""
+        """将 Session 对象转换为字典。"""
         rounds = RoundService.get_rounds_by_session(session.id)
-        total_questions = 0
+        total_questions = sum(round_obj.questions_count for round_obj in rounds)
 
-        for round_obj in rounds:
-            total_questions += round_obj.questions_count
-
+        room_id = session.room.id if session.room else session.room_id
         return {
-            'id': session.id,
-            'name': session.name,
-            'room_id': session.room.id,
-            'status': session.status,
-            'current_round': session.current_round,
-            'status_display': SessionService.get_status_display(session),
-            'created_at': session.created_at.isoformat(),
-            'updated_at': session.updated_at.isoformat(),
-            'rounds_count': len(rounds),
-            'questions_count': total_questions
+            "id": session.id,
+            "name": session.name,
+            "room_id": room_id,
+            "status": session.status,
+            "current_round": session.current_round,
+            "status_display": SessionService.get_status_display(session),
+            "created_at": session.created_at.isoformat() if session.created_at else None,
+            "updated_at": session.updated_at.isoformat() if session.updated_at else None,
+            "rounds_count": len(rounds),
+            "questions_count": total_questions,
         }
 
 
 class RoundService:
     """轮次管理服务"""
-    
+
     @staticmethod
-    def create_round(session_id: str, questions: List[str], round_type: str = 'ai_generated') -> Optional[Round]:
-        """创建新的对话轮次"""
-        session = SessionService.get_session(session_id)
-        if not session:
-            return None
-        
-        round_id = str(uuid.uuid4())
-        round_index = session.rounds.count()
-        questions_file_path = (
-            f"rooms/{session.room.id}/sessions/{session_id}/questions/round_{round_index}.json"
-        )
-        
-        round_obj = Round.create(
-            id=round_id,
-            session=session,
-            round_index=round_index,
-            questions_count=len(questions),
-            questions_file_path=questions_file_path,
-            round_type=round_type,
-            current_question_index=0,
-            status='active'
-        )
+    def create_round(session_id: str, questions: List[str], round_type: str = "ai_generated") -> Optional[Round]:
+        """创建新的对话轮次。"""
+        with db_session() as session:
+            stmt = (
+                select(Session)
+                .where(Session.id == session_id)
+                .options(selectinload(Session.room))
+            )
+            interview_session = session.execute(stmt).scalar_one_or_none()
+            if not interview_session:
+                return None
+
+            round_count = session.scalar(select(func.count(Round.id)).where(Round.session_id == session_id)) or 0
+            round_index = int(round_count)
+
+            round_obj = Round(
+                id=str(uuid.uuid4()),
+                session_id=session_id,
+                round_index=round_index,
+                questions_count=len(questions),
+                questions_file_path=(
+                    f"rooms/{interview_session.room.id}/sessions/{session_id}/questions/round_{round_index}.json"
+                ),
+                round_type=round_type,
+                current_question_index=0,
+                status="active",
+            )
+            session.add(round_obj)
+
         return round_obj
-    
+
     @staticmethod
     def get_round(round_id: str) -> Optional[Round]:
-        """获取轮次"""
-        try:
-            return Round.get_by_id(round_id)
-        except Round.DoesNotExist:
-            return None
-    
+        """获取轮次。"""
+        with SessionLocal() as session:
+            stmt = (
+                select(Round)
+                .where(Round.id == round_id)
+                .options(selectinload(Round.session).selectinload(Session.room))
+            )
+            return session.execute(stmt).scalar_one_or_none()
+
     @staticmethod
     def get_rounds_by_session(session_id: str) -> List[Round]:
-        """获取指定会话的所有轮次"""
-        session = SessionService.get_session(session_id)
-        if not session:
-            return []
-        return list(session.rounds.order_by(Round.round_index))
+        """获取指定会话的所有轮次。"""
+        with SessionLocal() as session:
+            stmt = (
+                select(Round)
+                .where(Round.session_id == session_id)
+                .options(selectinload(Round.session))
+                .order_by(Round.round_index)
+            )
+            return list(session.execute(stmt).scalars().all())
 
     @staticmethod
     def get_round_by_session_and_index(session_id: str, round_index: int) -> Optional[Round]:
-        """根据会话和轮次索引获取轮次记录"""
-        session = SessionService.get_session(session_id)
-        if not session:
-            return None
-        return Round.select().where(
-            (Round.session == session) & (Round.round_index == round_index)
-        ).first()
-    
+        """根据会话和轮次索引获取轮次记录。"""
+        with SessionLocal() as session:
+            stmt = (
+                select(Round)
+                .where(Round.session_id == session_id, Round.round_index == round_index)
+                .options(selectinload(Round.session).selectinload(Session.room))
+            )
+            return session.execute(stmt).scalar_one_or_none()
+
     @staticmethod
     def delete_round(round_id: str) -> bool:
-        """删除轮次及其相关数据"""
-        try:
-            round_obj = Round.get_by_id(round_id)
+        """删除轮次及其相关数据。"""
+        with SessionLocal() as session:
+            stmt = (
+                select(Round)
+                .where(Round.id == round_id)
+                .options(selectinload(Round.session).selectinload(Session.room))
+            )
+            round_obj = session.execute(stmt).scalar_one_or_none()
+            if not round_obj:
+                return False
 
-            # 删除相关的MinIO文件
-            RoundService._delete_round_files(round_obj)
+        RoundService._delete_round_files(round_obj)
 
-            # 删除相关的QuestionAnswer记录
-            from backend.models.models import QuestionAnswer
-            QuestionAnswer.delete().where(QuestionAnswer.round == round_obj).execute()
-
-            # 删除Round记录
-            round_obj.delete_instance()
-            return True
-        except Round.DoesNotExist:
-            return False
+        with db_session() as session:
+            round_obj = session.get(Round, round_id)
+            if round_obj:
+                session.delete(round_obj)
+        return True
 
     @staticmethod
-    def _delete_round_files(round_obj: Round):
-        """删除轮次相关的MinIO文件"""
+    def _delete_round_files(round_obj: Round) -> None:
+        """删除轮次相关的 MinIO 文件。"""
         try:
             from backend.clients.minio_client import minio_client
 
             room_id = round_obj.session.room.id
             session_id = round_obj.session.id
 
-            # 删除题目文件: rooms/{room_id}/sessions/{session_id}/questions/round_{round_index}.json
-            questions_file = (
-                f"rooms/{room_id}/sessions/{session_id}/questions/round_{round_obj.round_index}.json"
-            )
+            questions_file = f"rooms/{room_id}/sessions/{session_id}/questions/round_{round_obj.round_index}.json"
             minio_client.delete_object(questions_file)
-            logger.info(f"Deleted questions file: {questions_file}")
+            logger.info("Deleted questions file: %s", questions_file)
 
-            # 删除分析文件: rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_index}.json
-            analysis_file = (
-                f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_obj.round_index}.json"
-            )
+            analysis_file = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_obj.round_index}.json"
             minio_client.delete_object(analysis_file)
-            logger.info(f"Deleted analysis file: {analysis_file}")
+            logger.info("Deleted analysis file: %s", analysis_file)
+        except Exception as exc:
+            logger.error("Error deleting round files: %s", exc)
 
-        except Exception as e:
-            logger.error(f"Error deleting round files: {e}")
-    
     @staticmethod
     def to_dict(round_obj: Round) -> Dict[str, Any]:
-        """将Round对象转换为字典"""
+        """将 Round 对象转换为字典。"""
         return {
-            'id': round_obj.id,
-            'session_id': round_obj.session.id,
-            'round_index': round_obj.round_index,
-            'questions_count': round_obj.questions_count,
-            'questions_file_path': round_obj.questions_file_path,
-            'round_type': round_obj.round_type,
-            'status': round_obj.status,  # 添加status字段
-            'created_at': round_obj.created_at.isoformat(),
-            'updated_at': round_obj.updated_at.isoformat()
+            "id": round_obj.id,
+            "session_id": round_obj.session_id,
+            "round_index": round_obj.round_index,
+            "questions_count": round_obj.questions_count,
+            "questions_file_path": round_obj.questions_file_path,
+            "round_type": round_obj.round_type,
+            "status": round_obj.status,
+            "created_at": round_obj.created_at.isoformat() if round_obj.created_at else None,
+            "updated_at": round_obj.updated_at.isoformat() if round_obj.updated_at else None,
         }
 
 
@@ -372,21 +415,25 @@ class RoundCompletionService:
     def get_by_idempotency(idempotency_key: str) -> Optional[RoundCompletion]:
         if not idempotency_key:
             return None
-        try:
-            return RoundCompletion.get(
-                RoundCompletion.idempotency_key == idempotency_key
+        with SessionLocal() as session:
+            stmt = (
+                select(RoundCompletion)
+                .where(RoundCompletion.idempotency_key == idempotency_key)
+                .options(selectinload(RoundCompletion.session))
             )
-        except RoundCompletion.DoesNotExist:
-            return None
+            return session.execute(stmt).scalar_one_or_none()
 
     @staticmethod
     def get_by_session_and_index(session: Optional[Session], round_index: int) -> Optional[RoundCompletion]:
         if not session:
             return None
-        return RoundCompletion.select().where(
-            (RoundCompletion.session == session) &
-            (RoundCompletion.round_index == round_index)
-        ).first()
+        with SessionLocal() as db:
+            stmt = (
+                select(RoundCompletion)
+                .where(RoundCompletion.session_id == session.id, RoundCompletion.round_index == round_index)
+                .options(selectinload(RoundCompletion.session))
+            )
+            return db.execute(stmt).scalar_one_or_none()
 
     @staticmethod
     def record_completion(
@@ -396,33 +443,40 @@ class RoundCompletionService:
         qa_object: Any,
         occurred_at: datetime,
         idempotency_key: str,
-        round_obj: Optional[Round] = None
+        round_obj: Optional[Round] = None,
     ) -> RoundCompletion:
-        payload = json.dumps(qa_object, ensure_ascii=False) if isinstance(qa_object, (dict, list)) else str(qa_object)
+        payload = (
+            json.dumps(qa_object, ensure_ascii=False)
+            if isinstance(qa_object, (dict, list))
+            else str(qa_object)
+        )
 
-        completion = RoundCompletion.create(
+        completion = RoundCompletion(
             id=str(uuid.uuid4()),
-            session=session,
+            session_id=session.id,
             round_index=round_index,
             idempotency_key=idempotency_key,
             payload=payload,
-            occurred_at=occurred_at
+            occurred_at=occurred_at,
         )
+
+        with db_session() as db:
+            db.add(completion)
+            if round_obj:
+                persistent_round = db.get(Round, round_obj.id)
+                if persistent_round:
+                    persistent_round.status = "completed"
+                    if persistent_round.questions_count is not None:
+                        persistent_round.current_question_index = max(
+                            persistent_round.current_question_index,
+                            persistent_round.questions_count,
+                        )
 
         logger.info(
             "Recorded round completion: session=%s, round_index=%s, idempotency_key=%s",
             session.id,
             round_index,
-            idempotency_key
+            idempotency_key,
         )
-
-        if round_obj:
-            round_obj.status = 'completed'
-            if round_obj.questions_count is not None:
-                round_obj.current_question_index = max(
-                    round_obj.current_question_index,
-                    round_obj.questions_count
-                )
-            round_obj.save()
-
         return completion
+
