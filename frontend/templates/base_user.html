@@ -6,14 +6,14 @@
     <title>{% block title %}夜莺面试官{% endblock %}</title>
 
     <!-- Favicon -->
-    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ url_for('static', path='favicon.svg') }}" type="image/svg+xml">
 
     <!-- Bootstrap CSS -->
-    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <!-- Font Awesome -->
-    <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
     <!-- 自定义样式 -->
-    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='css/main.css') }}" rel="stylesheet">
 
     <style>
         /* 确保导航栏z-index不会太高 */
@@ -105,13 +105,13 @@
     </footer>
 
     <!-- Bootstrap JS -->
-    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', path='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <!-- jQuery -->
-    <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', path='vendor/jquery/jquery.min.js') }}"></script>
     <!-- 自定义脚本 -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', path='js/main.js') }}"></script>
     <!-- 钱包集成 -->
-    <script src="{{ url_for('static', filename='js/wallet.js') }}"></script>
+    <script src="{{ url_for('static', path='js/wallet.js') }}"></script>
 
     <!-- 初始化钱包地址显示 -->
     <script>

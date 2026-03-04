@@ -19,7 +19,7 @@ class Config:
         return cls._instance
 
     def __init__(self):
-        """初始化配置（仅执行一次）。"""
+        """初始化配置（执行一次）。"""
         if self._initialized:
             return
 

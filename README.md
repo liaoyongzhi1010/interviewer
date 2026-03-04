@@ -28,8 +28,6 @@ cp .env.example .env
 alembic upgrade head
 
 # 5. 启动应用
-python -m backend
-# 或
 uvicorn backend.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
@@ -38,13 +36,13 @@ uvicorn backend.main:app --host 0.0.0.0 --port 8080 --reload
 ## 架构说明（FastAPI-first）
 
 - 运行时统一为 FastAPI：`backend/main.py` 负责应用初始化与路由装配。
-- `backend/main.py` 提供 FastAPI app factory 与 ASGI app，`backend/__main__.py` 作为本地运行入口。
-- API 路由按领域拆分在 `backend/api/routers/`，`backend/api/routes.py` 仅做聚合装配。
+- `backend/main.py` 提供 FastAPI app factory 与 ASGI app。
+- API 路由按领域拆分在 `backend/api/routers/`，`backend/api/routes.py` 做聚合装配。
 - 页面渲染路由集中在 `backend/web/routes.py`。
 - 数据模型按领域拆分在 `backend/models/`（`base.py / resume.py / interview.py / bootstrap.py`）。
 - 数据库变更采用 Alembic 版本化迁移（`alembic/`），线上发布用 `alembic upgrade head` 管理 schema。
 - 鉴权与资源所有权校验放在 `backend/api/deps.py`，避免业务逻辑散落在控制器装饰器中。
-- 模板渲染使用 `backend/web/templates.py` 提供的 `url_for` 兼容层，前端模板无需大改即可迁移。
+- 模板渲染使用 `backend/web/templates.py`，模板中的静态资源通过 FastAPI 标准 `path` 参数生成 URL。
 
 ## 测试
 
