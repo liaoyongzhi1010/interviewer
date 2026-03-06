@@ -36,9 +36,14 @@ class Config:
         self.DATABASE_PATH = os.getenv('DATABASE_PATH', 'data/yeying_interviewer.db')
 
         # 大模型配置
-        self.QWEN_BASE_URL = os.getenv('QWEN_BASE_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1')
+        self.QWEN_BASE_URL = os.getenv('QWEN_BASE_URL', 'https://dashscope.aliyuncs.com/api/v1')
         self.QWEN_API_KEY = os.getenv('QWEN_API_KEY') or os.getenv('API_KEY')
         self.MODEL_NAME = os.getenv('MODEL_NAME', 'qwen-turbo')
+
+        # RAG 服务配置
+        self.RAG_ENABLED = os.getenv('RAG_ENABLED', 'false').lower() in ('true', '1', 'yes', 'on')
+        self.RAG_API_URL = os.getenv('RAG_API_URL', 'http://localhost:8000')
+        self.RAG_TIMEOUT = int(os.getenv('RAG_TIMEOUT', '30'))
 
         # 文档解析服务配置
         self.MINERU_API_KEY = os.getenv('MINERU_API_KEY')
@@ -50,10 +55,6 @@ class Config:
         self.MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY')
         self.MINIO_BUCKET = os.getenv('MINIO_BUCKET', 'yeying-interviewer')
         self.MINIO_SECURE = os.getenv('MINIO_SECURE', 'true').lower() == 'true'
-
-        # 数字人服务配置
-        self.PUBLIC_HOST = os.getenv('PUBLIC_HOST')
-        self.LLM_PORT = int(os.getenv('LLM_PORT', '8011'))
 
         # 应用配置
         self.APP_HOST = os.getenv('APP_HOST', '0.0.0.0')
@@ -83,30 +84,6 @@ class Config:
                 missing.append(name)
 
         return len(missing) == 0, missing
-
-    def get_minio_config(self) -> dict:
-        """获取MinIO配置字典"""
-        return {
-            'endpoint': self.MINIO_ENDPOINT,
-            'access_key': self.MINIO_ACCESS_KEY,
-            'secret_key': self.MINIO_SECRET_KEY,
-            'bucket': self.MINIO_BUCKET,
-            'secure': self.MINIO_SECURE,
-        }
-
-    def get_qwen_config(self) -> dict:
-        """获取Qwen配置字典"""
-        return {
-            'api_key': self.QWEN_API_KEY,
-            'base_url': self.QWEN_BASE_URL,
-            'model_name': self.MODEL_NAME,
-        }
-
-    def get_database_config(self) -> dict:
-        """获取数据库配置字典"""
-        return {
-            'path': self.DATABASE_PATH,
-        }
 
 
 # 全局配置实例

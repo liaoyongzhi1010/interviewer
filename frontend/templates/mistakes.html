@@ -3,244 +3,433 @@
 {% block title %}错题集管理 - 夜莺面试官{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- 页面标题 -->
-    <div class="row mb-4" style="margin-top: 40px;">
-        <div class="col-12">
-            <h2 class="fw-bold mb-1" style="font-size: 2rem;">
-                <i class="fas fa-bookmark me-3" style="color: var(--accent-blue);"></i>
-                错题集管理
-            </h2>
-            <p class="text-muted mb-0">回顾收藏的题目，针对性复习薄弱知识点</p>
+<div class="container-fluid px-4 mistakes-page">
+    <div class="mistakes-header">
+        <h2 class="mistakes-title">
+            <i class="fas fa-bookmark me-2"></i>错题集管理
+        </h2>
+        <p class="mistakes-subtitle mb-0">收藏面试题目，持续复习和标记掌握状态。</p>
+    </div>
+
+    <div class="mistakes-filters card">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">状态</label>
+                <select id="statusFilter" class="form-select">
+                    <option value="">全部</option>
+                    <option value="new">新收藏</option>
+                    <option value="reviewing">复习中</option>
+                    <option value="mastered">已掌握</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">分类</label>
+                <select id="categoryFilter" class="form-select">
+                    <option value="">全部分类</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">关键词</label>
+                <input id="keywordFilter" type="text" class="form-control" placeholder="搜索题目关键字">
+            </div>
+            <div class="col-md-2 d-grid">
+                <button id="searchBtn" class="btn btn-primary">
+                    <i class="fas fa-search me-1"></i>筛选
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- 筛选标签 -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="text-muted me-2">分类筛选:</span>
-                <button class="btn btn-sm btn-primary" style="border-radius: 20px; padding: 0.4rem 1.2rem;">
-                    全部 <span class="badge bg-white text-primary ms-1">12</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" style="border-radius: 20px; padding: 0.4rem 1.2rem;">
-                    算法 <span class="badge bg-secondary ms-1">5</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" style="border-radius: 20px; padding: 0.4rem 1.2rem;">
-                    系统设计 <span class="badge bg-secondary ms-1">3</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" style="border-radius: 20px; padding: 0.4rem 1.2rem;">
-                    前端 <span class="badge bg-secondary ms-1">4</span>
-                </button>
+    <div class="row g-3 mt-1 mb-2">
+        <div class="col-md-3 col-6">
+            <div class="mistake-stat-card">
+                <div class="mistake-stat-value" id="statTotal">0</div>
+                <div class="mistake-stat-label">收藏总数</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="mistake-stat-card">
+                <div class="mistake-stat-value" id="statNew">0</div>
+                <div class="mistake-stat-label">新收藏</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="mistake-stat-card">
+                <div class="mistake-stat-value" id="statReviewing">0</div>
+                <div class="mistake-stat-label">复习中</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="mistake-stat-card">
+                <div class="mistake-stat-value" id="statMasteredRate">0%</div>
+                <div class="mistake-stat-label">掌握率</div>
             </div>
         </div>
     </div>
 
-    <!-- 错题列表 -->
-    <div class="row g-4 mb-5">
-        <!-- 示例错题卡片 -->
-        <div class="col-lg-6">
-            <div class="card mistake-card h-100" style="transition: all 0.3s ease;">
-                <div class="card-header d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="badge me-2" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 0.4rem 0.8rem; border-radius: 6px;">
-                                算法
-                            </span>
-                            <span class="badge" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24; padding: 0.4rem 0.8rem; border-radius: 6px;">
-                                中等
-                            </span>
-                        </div>
-                        <h6 class="mb-1 fw-bold">实现 LRU 缓存淘汰算法</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>收藏于 2024-01-15
-                        </small>
-                    </div>
-                    <button class="btn btn-sm btn-light" style="border-radius: 8px;">
-                        <i class="fas fa-bookmark" style="color: #fbbf24;"></i>
-                    </button>
-                </div>
-
-                <div class="card-body">
-                    <p class="text-muted mb-3" style="font-size: 0.95rem; line-height: 1.6;">
-                        设计并实现一个满足 LRU (最近最少使用) 缓存约束的数据结构。要求实现 get 和 put 方法，时间复杂度均为 O(1)...
-                    </p>
-                    <div class="d-flex gap-2">
-                        <span class="badge" style="background: rgba(102, 126, 234, 0.1); color: var(--accent-blue); padding: 0.4rem 0.8rem; border-radius: 6px;">
-                            <i class="fas fa-hashtag me-1"></i>哈希表
-                        </span>
-                        <span class="badge" style="background: rgba(102, 126, 234, 0.1); color: var(--accent-blue); padding: 0.4rem 0.8rem; border-radius: 6px;">
-                            <i class="fas fa-hashtag me-1"></i>链表
-                        </span>
-                    </div>
-                </div>
-
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-3 text-muted" style="font-size: 0.9rem;">
-                        <span><i class="fas fa-redo me-1"></i>复习 2 次</span>
-                        <span><i class="fas fa-clock me-1"></i>10 分钟前</span>
-                    </div>
-                    <button class="btn btn-sm btn-primary" style="border-radius: 8px;">查看详情</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card mistake-card h-100" style="transition: all 0.3s ease;">
-                <div class="card-header d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="badge me-2" style="background: rgba(79, 172, 254, 0.1); color: #4facfe; padding: 0.4rem 0.8rem; border-radius: 6px;">
-                                前端
-                            </span>
-                            <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-green); padding: 0.4rem 0.8rem; border-radius: 6px;">
-                                简单
-                            </span>
-                        </div>
-                        <h6 class="mb-1 fw-bold">解释 React Hooks 的闭包陷阱</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>收藏于 2024-01-14
-                        </small>
-                    </div>
-                    <button class="btn btn-sm btn-light" style="border-radius: 8px;">
-                        <i class="fas fa-bookmark" style="color: #fbbf24;"></i>
-                    </button>
-                </div>
-
-                <div class="card-body">
-                    <p class="text-muted mb-3" style="font-size: 0.95rem; line-height: 1.6;">
-                        在使用 useState 和 useEffect 时，如何避免闭包导致的状态不更新问题？请举例说明常见场景和解决方案...
-                    </p>
-                    <div class="d-flex gap-2">
-                        <span class="badge" style="background: rgba(102, 126, 234, 0.1); color: var(--accent-blue); padding: 0.4rem 0.8rem; border-radius: 6px;">
-                            <i class="fas fa-hashtag me-1"></i>React
-                        </span>
-                        <span class="badge" style="background: rgba(102, 126, 234, 0.1); color: var(--accent-blue); padding: 0.4rem 0.8rem; border-radius: 6px;">
-                            <i class="fas fa-hashtag me-1"></i>Hooks
-                        </span>
-                    </div>
-                </div>
-
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-3 text-muted" style="font-size: 0.9rem;">
-                        <span><i class="fas fa-redo me-1"></i>复习 1 次</span>
-                        <span><i class="fas fa-clock me-1"></i>1 天前</span>
-                    </div>
-                    <button class="btn btn-sm btn-primary" style="border-radius: 8px;">查看详情</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card mistake-card h-100" style="transition: all 0.3s ease;">
-                <div class="card-header d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="badge me-2" style="background: rgba(168, 85, 247, 0.1); color: var(--accent-purple); padding: 0.4rem 0.8rem; border-radius: 6px;">
-                                系统设计
-                            </span>
-                            <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 0.4rem 0.8rem; border-radius: 6px;">
-                                困难
-                            </span>
-                        </div>
-                        <h6 class="mb-1 fw-bold">设计一个分布式限流系统</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>收藏于 2024-01-13
-                        </small>
-                    </div>
-                    <button class="btn btn-sm btn-light" style="border-radius: 8px;">
-                        <i class="fas fa-bookmark" style="color: #fbbf24;"></i>
-                    </button>
-                </div>
-
-                <div class="card-body">
-                    <p class="text-muted mb-3" style="font-size: 0.95rem; line-height: 1.6;">
-                        如何设计一个支持分布式环境的限流系统？需要考虑令牌桶、漏桶算法的选择，以及 Redis 的使用...
-                    </p>
-                    <div class="d-flex gap-2">
-                        <span class="badge" style="background: rgba(102, 126, 234, 0.1); color: var(--accent-blue); padding: 0.4rem 0.8rem; border-radius: 6px;">
-                            <i class="fas fa-hashtag me-1"></i>分布式
-                        </span>
-                        <span class="badge" style="background: rgba(102, 126, 234, 0.1); color: var(--accent-blue); padding: 0.4rem 0.8rem; border-radius: 6px;">
-                            <i class="fas fa-hashtag me-1"></i>限流
-                        </span>
-                    </div>
-                </div>
-
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-3 text-muted" style="font-size: 0.9rem;">
-                        <span><i class="fas fa-redo me-1"></i>复习 3 次</span>
-                        <span><i class="fas fa-clock me-1"></i>2 天前</span>
-                    </div>
-                    <button class="btn btn-sm btn-primary" style="border-radius: 8px;">查看详情</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 空状态（无错题时显示） -->
-        <!-- <div class="col-12 text-center py-5">
-            <i class="fas fa-bookmark fa-4x text-muted mb-3" style="opacity: 0.3;"></i>
-            <h5 class="text-muted mb-2">还没有收藏的题目</h5>
-            <p class="text-muted">在面试会话中点击收藏按钮，将重要题目添加到错题集</p>
-        </div> -->
-    </div>
-
-    <!-- 统计面板 -->
-    <div class="row g-4" style="margin-top: 3rem;">
-        <div class="col-12 mb-3">
-            <h5 class="fw-bold" style="color: #4a5568;">
-                <i class="fas fa-chart-bar me-2"></i>错题统计
-            </h5>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="card text-center" style="padding: 1.5rem 1rem;">
-                <div style="width: 50px; height: 50px; margin: 0 auto 0.75rem; background: rgba(102, 126, 234, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-bookmark" style="font-size: 1.5rem; color: var(--accent-blue);"></i>
-                </div>
-                <h4 class="fw-bold mb-1" style="color: var(--accent-blue);">12</h4>
-                <p class="mb-0 text-muted" style="font-size: 0.9rem;">收藏总数</p>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="card text-center" style="padding: 1.5rem 1rem;">
-                <div style="width: 50px; height: 50px; margin: 0 auto 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-check-circle" style="font-size: 1.5rem; color: var(--accent-green);"></i>
-                </div>
-                <h4 class="fw-bold mb-1" style="color: var(--accent-green);">7</h4>
-                <p class="mb-0 text-muted" style="font-size: 0.9rem;">已掌握</p>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="card text-center" style="padding: 1.5rem 1rem;">
-                <div style="width: 50px; height: 50px; margin: 0 auto 0.75rem; background: rgba(251, 191, 36, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-redo" style="font-size: 1.5rem; color: #fbbf24;"></i>
-                </div>
-                <h4 class="fw-bold mb-1" style="color: #fbbf24;">18</h4>
-                <p class="mb-0 text-muted" style="font-size: 0.9rem;">复习次数</p>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="card text-center" style="padding: 1.5rem 1rem;">
-                <div style="width: 50px; height: 50px; margin: 0 auto 0.75rem; background: rgba(168, 85, 247, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-fire" style="font-size: 1.5rem; color: var(--accent-purple);"></i>
-                </div>
-                <h4 class="fw-bold mb-1" style="color: var(--accent-purple);">5</h4>
-                <p class="mb-0 text-muted" style="font-size: 0.9rem;">本周复习</p>
-            </div>
-        </div>
-    </div>
+    <div id="mistakeList" class="row g-3 mb-4"></div>
 </div>
 
 <style>
-.mistake-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    .mistakes-page {
+        margin-top: 24px;
+    }
+
+    .mistakes-header {
+        margin-bottom: 1rem;
+    }
+
+    .mistakes-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.3rem;
+    }
+
+    .mistakes-subtitle {
+        color: #64748b;
+    }
+
+    .mistakes-filters {
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        padding: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .mistake-stat-card {
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: #fff;
+        padding: 0.9rem;
+        text-align: center;
+    }
+
+    .mistake-stat-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1d4ed8;
+    }
+
+    .mistake-stat-label {
+        margin-top: 0.22rem;
+        color: #64748b;
+        font-size: 0.86rem;
+    }
+
+    .mistake-card {
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: #fff;
+        height: 100%;
+        padding: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+    }
+
+    .mistake-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+    }
+
+    .mistake-badges {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.38rem;
+        flex-wrap: wrap;
+    }
+
+    .mistake-badge {
+        border-radius: 999px;
+        border: 1px solid rgba(79, 70, 229, 0.2);
+        background: rgba(224, 231, 255, 0.72);
+        color: #312e81;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.22rem 0.56rem;
+    }
+
+    .mistake-badge.status-new {
+        border-color: rgba(59, 130, 246, 0.25);
+        background: rgba(59, 130, 246, 0.12);
+        color: #1d4ed8;
+    }
+
+    .mistake-badge.status-reviewing {
+        border-color: rgba(245, 158, 11, 0.3);
+        background: rgba(251, 191, 36, 0.16);
+        color: #b45309;
+    }
+
+    .mistake-badge.status-mastered {
+        border-color: rgba(16, 185, 129, 0.3);
+        background: rgba(16, 185, 129, 0.16);
+        color: #047857;
+    }
+
+    .mistake-question {
+        margin: 0;
+        color: #0f172a;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.52;
+    }
+
+    .mistake-answer {
+        margin: 0;
+        color: #475569;
+        font-size: 0.9rem;
+        line-height: 1.58;
+        min-height: 44px;
+    }
+
+    .mistake-meta {
+        color: #64748b;
+        font-size: 0.82rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+    }
+
+    .mistake-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.38rem;
+        flex-wrap: wrap;
+    }
+
+    .mistake-actions .btn {
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.32rem 0.58rem;
+    }
+
+    .mistake-empty {
+        border-radius: 12px;
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        color: #64748b;
+        text-align: center;
+        padding: 2rem 1rem;
+        background: rgba(248, 250, 252, 0.8);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showToast(type, message) {
+    if (window.YeyingInterviewer && window.YeyingInterviewer.showToast) {
+        window.YeyingInterviewer.showToast(type, message);
+        return;
+    }
+    console.log(`[${type}] ${message}`);
 }
 
-.btn-outline-secondary:hover {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-    color: white;
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
-</style>
+
+function statusLabel(status) {
+    if (status === 'mastered') return '已掌握';
+    if (status === 'reviewing') return '复习中';
+    return '新收藏';
+}
+
+function formatTime(value) {
+    if (!value) return '-';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleString('zh-CN');
+}
+
+function buildQuery() {
+    const status = (document.getElementById('statusFilter').value || '').trim();
+    const category = (document.getElementById('categoryFilter').value || '').trim();
+    const keyword = (document.getElementById('keywordFilter').value || '').trim();
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (category) params.set('category', category);
+    if (keyword) params.set('keyword', keyword);
+    const query = params.toString();
+    return query ? `?${query}` : '';
+}
+
+function renderStats(stats) {
+    const statusCounts = stats?.status_counts || {};
+    document.getElementById('statTotal').textContent = String(stats?.total || 0);
+    document.getElementById('statNew').textContent = String(statusCounts.new || 0);
+    document.getElementById('statReviewing').textContent = String(statusCounts.reviewing || 0);
+    document.getElementById('statMasteredRate').textContent = `${stats?.mastered_rate || 0}%`;
+}
+
+function renderCategoryOptions(stats) {
+    const categorySelect = document.getElementById('categoryFilter');
+    const selected = categorySelect.value;
+    const counts = stats?.category_counts || {};
+
+    const options = ['<option value="">全部分类</option>'];
+    Object.keys(counts).sort().forEach((key) => {
+        options.push(`<option value="${escapeHtml(key)}">${escapeHtml(key)} (${counts[key]})</option>`);
+    });
+
+    categorySelect.innerHTML = options.join('');
+    if (selected && counts[selected] !== undefined) {
+        categorySelect.value = selected;
+    }
+}
+
+function renderList(items) {
+    const list = document.getElementById('mistakeList');
+    if (!Array.isArray(items) || items.length === 0) {
+        list.innerHTML = `
+            <div class="col-12">
+                <div class="mistake-empty">
+                    <i class="fas fa-bookmark mb-2" style="font-size: 2rem; opacity: 0.4;"></i>
+                    <div>还没有收藏题目，去面试会话里收藏后会显示在这里。</div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = items.map((item) => {
+        const category = item.question_category || '未分类';
+        const status = item.status || 'new';
+        const answer = item.answer_text || '暂无回答内容';
+        const answerScore = item.answer_score === null || item.answer_score === undefined ? '-' : `${item.answer_score} 分`;
+        return `
+            <div class="col-12 col-lg-6">
+                <div class="mistake-card">
+                    <div class="mistake-card-head">
+                        <div class="mistake-badges">
+                            <span class="mistake-badge">${escapeHtml(category)}</span>
+                            <span class="mistake-badge status-${escapeHtml(status)}">${statusLabel(status)}</span>
+                        </div>
+                        <span class="text-muted small">${answerScore}</span>
+                    </div>
+                    <p class="mistake-question">${escapeHtml(item.question_text || '')}</p>
+                    <p class="mistake-answer">${escapeHtml(answer).slice(0, 180)}</p>
+                    <div class="mistake-meta">
+                        <span>会话：${escapeHtml(item.session_name || item.session_id || '-')}</span>
+                        <span>收藏于：${escapeHtml(formatTime(item.created_at))}</span>
+                    </div>
+                    <div class="mistake-actions">
+                        <button type="button" class="btn btn-outline-secondary" data-action="review" data-id="${item.id}">
+                            <i class="fas fa-redo me-1"></i>复习+1
+                        </button>
+                        <button type="button" class="btn btn-outline-success" data-action="mastered" data-id="${item.id}">
+                            <i class="fas fa-check me-1"></i>标记掌握
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" data-action="remove" data-qa-id="${item.qa_id}">
+                            <i class="fas fa-bookmark-slash me-1"></i>取消收藏
+                        </button>
+                        <a class="btn btn-outline-primary" href="/session/${item.session_id}">
+                            <i class="fas fa-up-right-from-square me-1"></i>查看原会话
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadMistakes() {
+    const list = document.getElementById('mistakeList');
+    list.innerHTML = '<div class="col-12"><div class="mistake-empty">正在加载错题数据...</div></div>';
+
+    try {
+        const response = await fetch(`/api/v1/mistakes${buildQuery()}`);
+        const data = await response.json();
+        if (!response.ok || !data.success || !data.data) {
+            showToast('error', data.message || '加载错题失败');
+            list.innerHTML = '<div class="col-12"><div class="mistake-empty">加载失败，请刷新重试。</div></div>';
+            return;
+        }
+
+        renderStats(data.data.stats || {});
+        renderCategoryOptions(data.data.stats || {});
+        renderList(data.data.items || []);
+    } catch (error) {
+        showToast('error', '加载错题失败');
+        list.innerHTML = '<div class="col-12"><div class="mistake-empty">加载失败，请刷新重试。</div></div>';
+    }
+}
+
+async function patchMistakeStatus(itemId, status) {
+    const response = await fetch(`/api/v1/mistakes/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        throw new Error(data.message || '更新失败');
+    }
+}
+
+async function recordReview(itemId) {
+    const response = await fetch(`/api/v1/mistakes/${itemId}/review`, { method: 'POST' });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        throw new Error(data.message || '记录复习失败');
+    }
+}
+
+async function removeFavoriteByQa(qaId) {
+    const response = await fetch(`/api/v1/mistakes/favorite/${qaId}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        throw new Error(data.message || '取消收藏失败');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('searchBtn').addEventListener('click', loadMistakes);
+    document.getElementById('statusFilter').addEventListener('change', loadMistakes);
+    document.getElementById('categoryFilter').addEventListener('change', loadMistakes);
+    document.getElementById('keywordFilter').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            loadMistakes();
+        }
+    });
+
+    document.getElementById('mistakeList').addEventListener('click', async function(event) {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        button.disabled = true;
+        try {
+            if (action === 'mastered') {
+                await patchMistakeStatus(button.dataset.id, 'mastered');
+                showToast('success', '已标记为掌握');
+            } else if (action === 'review') {
+                await recordReview(button.dataset.id);
+                showToast('success', '已记录复习');
+            } else if (action === 'remove') {
+                await removeFavoriteByQa(button.dataset.qaId);
+                showToast('success', '已取消收藏');
+            }
+            await loadMistakes();
+        } catch (error) {
+            showToast('error', error.message || '操作失败');
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    loadMistakes();
+});
+</script>
 {% endblock %}

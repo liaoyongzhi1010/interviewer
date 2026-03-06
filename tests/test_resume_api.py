@@ -12,7 +12,7 @@ from sqlalchemy import delete, func, select
 # 为测试提供最小必需配置，避免依赖本机环境变量文件。
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret")
 os.environ.setdefault("QWEN_API_KEY", "test-qwen-key")
-os.environ.setdefault("DATABASE_PATH", "/tmp/yeying_test_resume_api.db")
+os.environ["DATABASE_PATH"] = "/tmp/yeying_test_resume_api.db"
 
 from backend.main import app
 from backend.models import (
@@ -20,8 +20,6 @@ from backend.models import (
     QuestionAnswer,
     Resume,
     Room,
-    Round,
-    RoundCompletion,
     Session,
     SessionLocal,
     db_session,
@@ -43,8 +41,6 @@ class ResumeApiTest(unittest.TestCase):
         # 按外键依赖顺序清理，保证测试互不影响。
         with db_session() as session:
             session.execute(delete(QuestionAnswer))
-            session.execute(delete(RoundCompletion))
-            session.execute(delete(Round))
             session.execute(delete(Session))
             session.execute(delete(Room))
             session.execute(delete(Resume))

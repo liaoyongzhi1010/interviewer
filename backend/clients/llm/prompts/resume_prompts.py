@@ -71,33 +71,3 @@ JSON 格式严格如下：
 }}"""
 
     return prompt
-
-
-def get_resume_validation_prompt(extracted_data: dict, original_markdown: str) -> str:
-    """
-    验证和补充简历提取数据的提示词
-
-    Args:
-        extracted_data: 已提取的结构化数据
-        original_markdown: 原始Markdown内容
-
-    Returns:
-        LLM提示词
-    """
-    prompt = f"""你是一位专业的简历审核助手，请检查以下提取的简历数据是否完整和准确。
-
-原始简历（Markdown）：
-{original_markdown}
-
-已提取的数据（JSON）：
-{extracted_data}
-
-请执行以下任务：
-1. 检查提取的信息是否准确，有无遗漏重要技能或项目
-2. 如果有遗漏，补充遗漏的信息
-3. 优化项目描述，使其更加清晰和结构化
-4. 确保技能列表完整且去重
-
-返回优化后的JSON数据，格式与原数据相同，不要添加解释："""
-
-    return prompt

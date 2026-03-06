@@ -175,7 +175,6 @@ class PDFReportGenerator:
         pdf_bytes: bytes,
         room_id: str,
         session_id: str,
-        round_index: int
     ) -> Optional[str]:
         """
         保存报告文档到对象存储
@@ -184,13 +183,12 @@ class PDFReportGenerator:
             pdf_bytes: 报告文档字节流
             room_id: 面试间ID
             session_id: 会话ID
-            round_index: 轮次索引
 
         Returns:
             保存的文件名，失败返回None
         """
         try:
-            filename = f"rooms/{room_id}/sessions/{session_id}/reports/report_{round_index}.pdf"
+            filename = f"rooms/{room_id}/sessions/{session_id}/reports/report.pdf"
             pdf_stream = io.BytesIO(pdf_bytes)
 
             # 上传到对象存储

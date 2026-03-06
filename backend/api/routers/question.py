@@ -1,42 +1,20 @@
-"""题目与问答流程 API 路由。"""
-
-import os
-from datetime import datetime
+"""题目与问答流程 API 路由（无轮次版本）。"""
 
 from fastapi import APIRouter, Request
-from sqlalchemy import func, select
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from backend.api.deps import ensure_room_owner, ensure_session_owner, is_valid_uuid, require_api_user
 from backend.api.response import ApiResponse, ResponseCode
-from backend.api.schemas import QACompletionRequest, SaveAnswerRequest, UploadJDRequest
-from backend.clients.digitalhub_client import start_llm
+from backend.api.schemas import SaveAnswerRequest, UploadJDRequest
 from backend.clients.minio_client import download_qa_analysis, minio_client
+from backend.common.config import config
 from backend.common.logger import get_logger
-from backend.models import QuestionAnswer, Room, Round, Session, SessionLocal, db_session
-from backend.services.interview_service import RoundService, SessionService
+from backend.models import QuestionAnswer, Room, Session, SessionLocal, db_session
 
 logger = get_logger(__name__)
 
 router = APIRouter(tags=["Question"])
-
-
-def _start_llm_server(session_id: str, room_id: str, result: dict, round_index: int) -> None:
-    try:
-        llm_info = start_llm(
-            room_id=room_id,
-            session_id=session_id,
-            round_index=int(round_index),
-            port=int(os.getenv("LLM_PORT", "8011")),
-            minio_endpoint=os.getenv("MINIO_ENDPOINT", "test-minio.yeying.pub"),
-            minio_access_key=os.getenv("MINIO_ACCESS_KEY", ""),
-            minio_secret_key=os.getenv("MINIO_SECRET_KEY", ""),
-            minio_bucket=os.getenv("MINIO_BUCKET", "yeying-interviewer"),
-            minio_secure=os.getenv("MINIO_SECURE", "true").lower() == "true",
-        )
-        result["llm"] = llm_info.get("data", llm_info)
-    except Exception as exc:
-        logger.warning("Failed to start LLM server: %s", exc)
-        result["llm_error"] = str(exc)
 
 
 @router.post("/api/v1/generate_questions/{session_id}")
@@ -48,19 +26,17 @@ def generate_questions(request: Request, session_id: str):
     if auth_error:
         return auth_error
 
-    session, owner_error = ensure_session_owner(session_id, current_user)
+    interview_session, owner_error = ensure_session_owner(session_id, current_user)
     if owner_error:
         return owner_error
 
+    previous_status = interview_session.status
     try:
         with db_session() as db:
-            rounds_count = db.scalar(select(func.count(Round.id)).where(Round.session_id == session.id)) or 0
-            persistent_session = db.get(Session, session.id)
+            persistent_session = db.get(Session, interview_session.id)
             if not persistent_session:
                 return ApiResponse.not_found("面试会话")
-            persistent_session.current_round = int(rounds_count) + 1
             persistent_session.status = "generating"
-            next_round = persistent_session.current_round
 
         from backend.services.question import get_question_generation_service
 
@@ -69,34 +45,29 @@ def generate_questions(request: Request, session_id: str):
 
         if not result.get("success"):
             with db_session() as db:
-                persistent_session = db.get(Session, session.id)
+                persistent_session = db.get(Session, interview_session.id)
                 if persistent_session:
-                    persistent_session.current_round = max(0, int(next_round) - 1)
-                    persistent_session.status = (
-                        "round_completed" if persistent_session.current_round > 0 else "initialized"
-                    )
+                    persistent_session.status = previous_status
             return ApiResponse.error(result.get("error", "生成面试题失败"))
 
-        with db_session() as db:
-            persistent_session = db.get(Session, session.id)
-            if persistent_session:
-                persistent_session.status = "interviewing"
+        target_status = "interviewing"
+        if result.get("already_generated") and previous_status == "completed":
+            target_status = "completed"
 
-        _start_llm_server(session_id, session.room.id, result, result.get("round_index", 0))
+        with db_session() as db:
+            persistent_session = db.get(Session, interview_session.id)
+            if persistent_session:
+                persistent_session.status = target_status
+
         return ApiResponse.success(data=result)
 
     except Exception as exc:
         logger.error("Failed to generate questions: %s", exc, exc_info=True)
         try:
-            rollback_session = SessionService.get_session(session_id)
-            if rollback_session:
-                with db_session() as db:
-                    persistent_session = db.get(Session, rollback_session.id)
-                    if persistent_session:
-                        persistent_session.current_round = max(0, persistent_session.current_round - 1)
-                        persistent_session.status = (
-                            "round_completed" if persistent_session.current_round > 0 else "initialized"
-                        )
+            with db_session() as db:
+                persistent_session = db.get(Session, interview_session.id)
+                if persistent_session:
+                    persistent_session.status = previous_status
         except Exception as rollback_error:
             logger.error("Failed to rollback session status: %s", rollback_error)
 
@@ -116,9 +87,12 @@ def upload_jd(request: Request, room_id: str, payload: UploadJDRequest):
     if owner_error:
         return owner_error
 
-    content = payload.content
-    company = payload.company
-    position = payload.position
+    if not config.RAG_ENABLED:
+        return ApiResponse.bad_request("JD 上传功能未开启，请先在后端配置 RAG_ENABLED=true")
+
+    content = str(payload.content).strip()
+    if not content:
+        return ApiResponse.bad_request("JD 内容不能为空")
 
     try:
         from backend.clients.rag_client import get_rag_client
@@ -126,8 +100,8 @@ def upload_jd(request: Request, room_id: str, payload: UploadJDRequest):
         rag_client = get_rag_client()
         jd_id = rag_client.upload_jd(
             memory_id=room.memory_id,
-            company=company,
-            position=position,
+            company=payload.company,
+            position=payload.position,
             content=content,
         )
 
@@ -137,30 +111,33 @@ def upload_jd(request: Request, room_id: str, payload: UploadJDRequest):
                 return ApiResponse.not_found("面试间")
             persistent_room.jd_id = jd_id
 
-        return ApiResponse.success(data={"jd_id": jd_id}, message="JD上传成功")
+        return ApiResponse.success(
+            data={"jd_id": jd_id},
+            message="JD 上传成功，本面试间后续出题将优先使用该 JD",
+        )
     except Exception as exc:
-        logger.error("Failed to upload JD: %s", exc, exc_info=True)
-        return ApiResponse.internal_error(f"上传JD失败: {exc}")
+        logger.error("Failed to upload JD for room %s: %s", room_id, exc, exc_info=True)
+        return ApiResponse.internal_error("JD 上传失败，请稍后重试")
 
 
-@router.get("/api/v1/get_current_question/{round_id}")
-def get_current_question(request: Request, round_id: str):
+@router.get("/api/v1/get_current_question/{session_id}")
+def get_current_question(request: Request, session_id: str):
+    if not is_valid_uuid(session_id):
+        return ApiResponse.bad_request("无效的session_id格式")
+
     current_user, auth_error = require_api_user(request)
     if auth_error:
         return auth_error
 
-    round_obj = RoundService.get_round(round_id)
-    if not round_obj:
-        return ApiResponse.not_found("轮次")
-
-    if round_obj.session.room.owner_address != current_user:
-        return ApiResponse.forbidden()
+    _, owner_error = ensure_session_owner(session_id, current_user)
+    if owner_error:
+        return owner_error
 
     try:
         from backend.services.question import get_question_generation_service
 
         service = get_question_generation_service()
-        question_data = service.get_current_question(round_id)
+        question_data = service.get_current_question(session_id)
 
         if question_data:
             return ApiResponse.success(data={"question_data": question_data})
@@ -182,14 +159,19 @@ def save_answer(request: Request, payload: SaveAnswerRequest):
     try:
         with SessionLocal() as db:
             qa = db.get(QuestionAnswer, qa_id)
-        if not qa:
-            return ApiResponse.not_found("问答记录")
+            if not qa:
+                return ApiResponse.not_found("问答记录")
 
-        qa_round = RoundService.get_round(qa.round_id)
-        if not qa_round:
-            return ApiResponse.not_found("轮次")
+            session_obj = db.execute(
+                select(Session)
+                .where(Session.id == qa.session_id)
+                .options(selectinload(Session.room))
+            ).scalar_one_or_none()
 
-        if qa_round.session.room.owner_address != current_user:
+        if not session_obj:
+            return ApiResponse.not_found("面试会话")
+
+        if session_obj.room.owner_address != current_user:
             return ApiResponse.forbidden()
 
         from backend.services.question import get_question_generation_service
@@ -205,8 +187,8 @@ def save_answer(request: Request, payload: SaveAnswerRequest):
         return ApiResponse.internal_error(f"保存回答失败: {exc}")
 
 
-@router.get("/api/v1/get_qa_analysis/{session_id}/{round_index}")
-def get_qa_analysis(request: Request, session_id: str, round_index: int):
+@router.get("/api/v1/get_qa_analysis/{session_id}")
+def get_qa_analysis(request: Request, session_id: str):
     if not is_valid_uuid(session_id):
         return ApiResponse.bad_request("无效的session_id格式")
 
@@ -220,8 +202,8 @@ def get_qa_analysis(request: Request, session_id: str, round_index: int):
 
     try:
         room_id = session_obj.room.id
-        analysis_filename = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_index}.json"
-        analysis_data = download_qa_analysis(room_id, session_id, round_index)
+        analysis_filename = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete.json"
+        analysis_data = download_qa_analysis(room_id, session_id)
 
         if analysis_data:
             return ApiResponse.success(
@@ -233,12 +215,10 @@ def get_qa_analysis(request: Request, session_id: str, round_index: int):
         return ApiResponse.internal_error(f"获取分析数据失败: {exc}")
 
 
-@router.post("/api/v1/qa_completion/{session_id}/{round_index}")
+@router.post("/api/v1/qa_completion/{session_id}")
 def confirm_qa_completion(
     request: Request,
     session_id: str,
-    round_index: int,
-    payload: QACompletionRequest | None = None,
 ):
     if not is_valid_uuid(session_id):
         return ApiResponse.bad_request("无效的session_id格式")
@@ -251,25 +231,14 @@ def confirm_qa_completion(
     if owner_error:
         return owner_error
 
-    idempotency_key = request.headers.get("Idempotency-Key") or (
-        payload.idempotency_key if payload else None
-    )
-    event_time = datetime.now().isoformat()
-
-    round_obj = RoundService.get_round_by_session_and_index(session_obj.id, round_index)
-    if not round_obj:
-        return ApiResponse.not_found("轮次")
-
     room_id = session_obj.room.id
-    qa_object_path = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_index}.json"
+    qa_object_path = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete.json"
 
     if not minio_client.object_exists(qa_object_path):
         logger.warning(
-            "QA object missing for session %s round %s at %s (idempotency_key=%s)",
+            "QA object missing for session %s at %s",
             session_id,
-            round_index,
             qa_object_path,
-            idempotency_key,
         )
         return ApiResponse.error(
             message="qa object missing",
@@ -277,36 +246,13 @@ def confirm_qa_completion(
             data={"qa_object_path": qa_object_path},
         )
 
-    try:
-        with db_session() as db:
-            persistent_round = db.get(Round, round_obj.id)
-            persistent_session = db.get(Session, session_obj.id)
-            if not persistent_round or not persistent_session:
-                return ApiResponse.not_found("面试会话")
-
-            if persistent_round.status != "completed":
-                persistent_round.status = "completed"
-                persistent_session.status = "round_completed"
-    except Exception as exc:
-        logger.error(
-            "Failed to update completion status for session %s round %s: %s",
-            session_id,
-            round_index,
-            exc,
-            exc_info=True,
-        )
-        return ApiResponse.internal_error("更新轮次状态失败")
-
     logger.info(
-        "QA completion confirmed for session %s round %s: path=%s, idempotency_key=%s, timestamp=%s",
+        "QA completion confirmed for session %s: path=%s",
         session_id,
-        round_index,
         qa_object_path,
-        idempotency_key,
-        event_time,
     )
 
     return ApiResponse.success(
         data={"is_completed": True, "qa_object_path": qa_object_path},
-        message="轮次完成确认成功",
+        message="会话完成确认成功",
     )

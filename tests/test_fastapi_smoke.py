@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 # 为测试提供最小必需配置，避免依赖本机环境变量文件。
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret")
 os.environ.setdefault("QWEN_API_KEY", "test-qwen-key")
-os.environ.setdefault("DATABASE_PATH", "/tmp/yeying_test.db")
+os.environ["DATABASE_PATH"] = "/tmp/yeying_test.db"
 
 from backend.main import app
 from backend.models import init_database

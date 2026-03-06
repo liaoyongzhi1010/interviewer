@@ -69,9 +69,9 @@
                         <div class="col-6">
                             <div style="padding: 0.75rem 0;">
                                 <h5 class="mb-1" style="color: var(--accent-green); font-size: 1.75rem; font-weight: 700;">
-                                    {{ room.rounds_count }}
+                                    {{ room.questions_count }}
                                 </h5>
-                                <small class="text-muted">轮次</small>
+                                <small class="text-muted">题目</small>
                             </div>
                         </div>
                     </div>
@@ -136,11 +136,14 @@
 </div>
 
 <!-- 选择简历模态框 -->
-<div class="modal fade" id="selectResumeModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade upload-modal" id="selectResumeModal" tabindex="-1" aria-labelledby="selectResumeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">选择简历创建面试间</h5>
+                <h5 class="modal-title" id="selectResumeModalLabel">
+                    <i class="fas fa-door-open me-2" style="color: var(--accent-blue);"></i>
+                    选择简历创建面试间
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -153,7 +156,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="mt-3 p-3" style="background: rgba(102, 126, 234, 0.05); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.1);">
+                <div class="alert upload-modal-hint mb-0 mt-3">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-info-circle me-2" style="color: var(--accent-blue);"></i>
                         <small class="text-muted mb-0">没有简历？<a href="{{ url_for('room.resumes_list') }}" class="text-primary">点击上传简历</a></small>
@@ -168,20 +171,22 @@
 </div>
 
 <!-- 删除面试间确认模态框 -->
-<div class="modal fade" id="deleteRoomModal" tabindex="-1">
+<div class="modal fade resume-action-modal resume-action-modal-danger" id="deleteRoomModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header border-0">
+            <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2" style="color: #ef4444;"></i>
-                    确认删除
+                    <span class="resume-action-icon">
+                        <i class="fas fa-trash"></i>
+                    </span>
+                    删除面试间
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-0" id="deleteRoomText">确定要删除这个面试间吗？此操作不可恢复。</p>
+                <div class="resume-action-message" id="deleteRoomText">确定要删除这个面试间吗？此操作不可恢复。</div>
             </div>
-            <div class="modal-footer border-0">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>取消
                 </button>
@@ -194,28 +199,33 @@
 </div>
 
 <!-- 重命名面试间模态框 -->
-<div class="modal fade" id="renameRoomModal" tabindex="-1">
+<div class="modal fade resume-action-modal resume-action-modal-rename" id="renameRoomModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header border-0">
+            <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-edit me-2" style="color: var(--accent-blue);"></i>
+                    <span class="resume-action-icon">
+                        <i class="fas fa-pen"></i>
+                    </span>
                     重命名面试间
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="renameRoomForm">
-                    <div class="mb-3">
+                    <div class="resume-action-field">
                         <label class="form-label">
                             <i class="fas fa-door-open me-1"></i>
                             新名称 <span class="text-danger">*</span>
                         </label>
                         <input type="text" class="form-control" id="newRoomName" placeholder="请输入新的面试间名称" required>
+                        <div class="resume-action-help">
+                            <i class="fas fa-lightbulb me-1"></i>建议使用“公司/岗位”命名，后续检索更清晰
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-0">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>取消
                 </button>
@@ -224,39 +234,6 @@
                 </button>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- 创建面试间 Loading 遮罩层 -->
-<div id="createRoomLoading" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 9999; backdrop-filter: blur(5px);">
-    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: white; padding: 3rem 4rem; border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); min-width: 400px;">
-        <div style="margin-bottom: 2rem;">
-            <div class="spinner-border" role="status" style="width: 3rem; height: 3rem; color: var(--accent-blue);">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-        <h5 class="fw-bold mb-4" style="color: #2d3748;">正在创建面试间...</h5>
-        <div style="text-align: left; max-width: 320px; margin: 0 auto;">
-            <div class="loading-step" id="step1" style="padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0;">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-grow spinner-grow-sm me-3" style="color: var(--accent-blue); width: 1rem; height: 1rem;"></div>
-                    <span style="color: #4a5568; font-size: 0.95rem;">正在分配资源</span>
-                </div>
-            </div>
-            <div class="loading-step" id="step2" style="padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0; opacity: 0.5;">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-grow spinner-grow-sm me-3" style="color: var(--accent-blue); width: 1rem; height: 1rem;"></div>
-                    <span style="color: #4a5568; font-size: 0.95rem;">正在初始化 AI 记忆体</span>
-                </div>
-            </div>
-            <div class="loading-step" id="step3" style="padding: 0.75rem 0; opacity: 0.5;">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-grow spinner-grow-sm me-3" style="color: var(--accent-blue); width: 1rem; height: 1rem;"></div>
-                    <span style="color: #4a5568; font-size: 0.95rem;">正在完成创建</span>
-                </div>
-            </div>
-        </div>
-        <p class="text-muted mt-4 mb-0" style="font-size: 0.85rem;">预计需要 10-15 秒，请耐心等待</p>
     </div>
 </div>
 
@@ -290,6 +267,22 @@
 .room-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 强制“选择简历创建面试间”弹窗居中，并在简历较多时内部滚动 */
+#selectResumeModal .modal-dialog {
+    min-height: calc(100% - 3.5rem);
+    display: flex;
+    align-items: center;
+}
+
+#selectResumeModal .modal-content {
+    width: 100%;
+}
+
+#resumeSelectList {
+    max-height: 42vh;
+    overflow-y: auto;
 }
 </style>
 {% endblock %}
@@ -383,24 +376,6 @@ $(document).ready(function() {
         // 隐藏选择对话框
         selectResumeModal.hide();
 
-        // 显示 loading 遮罩
-        $('#createRoomLoading').fadeIn(300);
-
-        // 步骤动画
-        setTimeout(function() {
-            $('#step1').css('opacity', '1');
-        }, 300);
-
-        setTimeout(function() {
-            $('#step1').find('.spinner-grow').replaceWith('<i class="fas fa-check-circle me-3" style="color: var(--accent-green);"></i>');
-            $('#step2').css('opacity', '1');
-        }, 2000);
-
-        setTimeout(function() {
-            $('#step2').find('.spinner-grow').replaceWith('<i class="fas fa-check-circle me-3" style="color: var(--accent-green);"></i>');
-            $('#step3').css('opacity', '1');
-        }, 5000);
-
         // 发送创建请求
         $.ajax({
             url: '/api/v1/rooms/create',
@@ -414,12 +389,10 @@ $(document).ready(function() {
                     // 创建成功，跳转到面试间详情页
                     window.location.href = `/room/${response.data.room_id}`;
                 } else {
-                    $('#createRoomLoading').hide();
                     showToast('error', '创建失败：' + (response.message || '未知错误'));
                 }
             },
             error: function(xhr) {
-                $('#createRoomLoading').hide();
                 const response = xhr.responseJSON;
                 showToast('error', '创建失败：' + (response?.message || '网络错误'));
             }
@@ -510,12 +483,5 @@ window.renameRoom = function(roomId, currentName) {
     renameRoomModal.show();
 };
 
-// 修复浏览器后退按钮导致 loading 遮罩卡住的问题
-window.addEventListener('pageshow', function(event) {
-    // 如果是通过后退/前进按钮访问的页面，隐藏 loading 遮罩
-    if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
-        $('#createRoomLoading').hide();
-    }
-});
 </script>
 {% endblock %}

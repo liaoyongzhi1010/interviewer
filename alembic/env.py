@@ -10,11 +10,12 @@ from sqlalchemy import engine_from_config, pool
 
 from backend.models.base import Base, DATABASE_URL
 from backend.models.auth import AuthChallenge
-from backend.models.interview import QuestionAnswer, Room, Round, RoundCompletion, Session
+from backend.models.interview import QuestionAnswer, Room, Session
+from backend.models.mistake import MistakeItem
 from backend.models.resume import Resume
 
 # 引用模型以确保 metadata 注册（避免被优化器裁剪）
-_ = (AuthChallenge, Resume, Room, Session, Round, QuestionAnswer, RoundCompletion)
+_ = (AuthChallenge, Resume, Room, Session, QuestionAnswer, MistakeItem)
 
 config = context.config
 
@@ -68,4 +69,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

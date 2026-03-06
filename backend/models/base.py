@@ -14,7 +14,18 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 load_dotenv()
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATABASE_PATH = os.getenv("DATABASE_PATH", "data/yeying_interviewer.db")
+
+
+def _resolve_database_path(database_path: str) -> str:
+    """将相对数据库路径固定解析到项目根目录，避免受启动目录影响。"""
+    if "://" in database_path or database_path == ":memory:":
+        return database_path
+    path = Path(database_path)
+    if path.is_absolute():
+        return str(path)
+    return str((PROJECT_ROOT / path).resolve())
 
 
 def _build_database_url(database_path: str) -> str:
@@ -33,6 +44,7 @@ def _ensure_database_dir(database_path: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
 
 
+DATABASE_PATH = _resolve_database_path(DATABASE_PATH)
 _ensure_database_dir(DATABASE_PATH)
 DATABASE_URL = _build_database_url(DATABASE_PATH)
 

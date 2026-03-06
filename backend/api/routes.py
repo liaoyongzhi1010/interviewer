@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from backend.api.routers.auth import router as auth_router
+from backend.api.routers.mistake import router as mistake_router
 from backend.api.routers.question import router as question_router
 from backend.api.routers.report import router as report_router
 from backend.api.routers.resume import router as resume_router
@@ -13,6 +14,7 @@ from backend.api.routers.system import router as system_router
 router = APIRouter(tags=["API"])
 
 router.include_router(auth_router)
+router.include_router(mistake_router)
 router.include_router(room_router)
 router.include_router(session_router)
 router.include_router(resume_router)

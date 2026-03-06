@@ -4,9 +4,8 @@
 """
 
 import os
-import json
 import requests
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from backend.common.logger import get_logger
 
@@ -207,77 +206,6 @@ class RAGClient:
         except requests.RequestException as e:
             logger.error(f"Error pushing message to RAG: {e}", exc_info=True)
             raise Exception(f"Failed to push message to RAG: {e}")
-
-    def delete_message(
-        self,
-        memory_id: str,
-        url: str,
-        app: str = "interviewer"
-    ) -> bool:
-        """
-        删除记忆中的消息
-
-        Args:
-            memory_id: 记忆体ID
-            url: 消息的唯一标识
-            app: 应用名称
-
-        Returns:
-            是否删除成功
-        """
-        try:
-            api_url = f"{self.api_url}/memory/delete"
-            payload = {
-                "memory_id": memory_id,
-                "app": app,
-                "url": url
-            }
-
-            response = requests.post(api_url, json=payload, timeout=self.timeout)
-            response.raise_for_status()
-
-            logger.info(f"Deleted message from RAG memory {memory_id}: {url}")
-            return True
-
-        except requests.RequestException as e:
-            logger.error(f"Error deleting message from RAG: {e}", exc_info=True)
-            return False
-
-    def clear_memory(
-        self,
-        memory_id: str,
-        app: str = "interviewer"
-    ) -> int:
-        """
-        清空记忆体
-
-        Args:
-            memory_id: 记忆体ID
-            app: 应用名称
-
-        Returns:
-            删除的消息数量
-        """
-        try:
-            api_url = f"{self.api_url}/memory/clear"
-            payload = {
-                "memory_id": memory_id,
-                "app": app
-            }
-
-            response = requests.post(api_url, json=payload, timeout=self.timeout)
-            response.raise_for_status()
-
-            result = response.json()
-            deleted = result.get('deleted', 0)
-
-            logger.info(f"Cleared RAG memory {memory_id}: {deleted} messages deleted")
-            return deleted
-
-        except requests.RequestException as e:
-            logger.error(f"Error clearing RAG memory: {e}", exc_info=True)
-            return 0
-
 
 # 全局单例
 _rag_client = None

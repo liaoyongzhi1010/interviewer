@@ -1,40 +1,30 @@
 {% extends "base_user.html" %}
 
-{% block title %}{{ room.memory_id }} - 面试间详情{% endblock %}
+{% block title %}{{ room.name }} - 面试间详情{% endblock %}
 
 {% block content %}
 <div class="row" style="margin-top: 20px;">
     <div class="col-12">
-        <!-- 面包屑导航 -->
-        <nav aria-label="breadcrumb" class="mb-4">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="{{ url_for('room.index') }}">
-                        <i class="fas fa-home me-1"></i>首页
-                    </a>
-                </li>
-                <li class="breadcrumb-item active">
-                    <i class="fas fa-door-open me-1"></i>{{ room.memory_id }}
-                </li>
-            </ol>
-        </nav>
-        
         <!-- 面试间信息 -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-door-open me-2"></i>
-                        面试间：{{ room.memory_id }}
+                        面试间：{{ room.name }}
                     </h5>
                     <div>
+                        <a href="{{ url_for('room.index') }}" class="btn btn-outline-light btn-sm me-2">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            返回首页
+                        </a>
                         <button type="button" class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#selectResumeModal">
                             <i class="fas fa-file-alt me-1"></i>
                             <span id="selectResumeBtnText">更新简历</span>
                         </button>
                         <button type="button" class="btn btn-info btn-sm me-2" data-bs-toggle="modal" data-bs-target="#uploadJDModal">
                             <i class="fas fa-file-alt me-1"></i>
-                            <span id="uploadJDBtnText">上传JD</span>
+                            <span id="uploadJDBtnText">更新JD</span>
                         </button>
                         <button type="button" class="btn btn-success btn-sm me-2" id="createSessionBtn" onclick="createSession()">
                             <i class="fas fa-plus me-1"></i>
@@ -42,7 +32,7 @@
                         </button>
                         <button class="btn btn-outline-light btn-sm delete-room-btn"
                                 data-room-id="{{ room.id }}"
-                                data-room-name="{{ room.memory_id }}">
+                                data-room-name="{{ room.name }}">
                             <i class="fas fa-trash me-1"></i>
                             删除面试间
                         </button>
@@ -61,8 +51,8 @@
 
                 <div class="row">
                     <div class="col-md-6">
-                        <p><strong>面试间ID:</strong> <code>{{ room.id }}</code></p>
-                        <p><strong>Memory ID:</strong> <code class="text-primary">{{ room.memory_id }}</code></p>
+                        <p><strong>面试间名称:</strong> {{ room.name }}</p>
+                        <p><strong>最近更新:</strong> {{ room.updated_at[:19]|replace('T', ' ') if room.updated_at else '-' }}</p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>创建时间:</strong> {{ room.created_at[:19]|replace('T', ' ') }}</p>
@@ -109,11 +99,6 @@
                     </div>
 
                     <div class="card-body session-card-body" style="cursor: pointer;" data-session-id="{{ session['id'] }}" onclick="navigateToSession(this)">
-                        <div class="mb-2">
-                            <strong>会话ID:</strong>
-                            <code class="text-info">{{ session['id'][:8] }}...</code>
-                        </div>
-
                         <div class="mb-3">
                             <span class="badge session-status-badge status-{{ session['status'] }}" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
                                 {{ session['status_display'] }}
@@ -123,13 +108,13 @@
                         <div class="row text-center">
                             <div class="col-6">
                                 <div class="border-end">
-                                    <h5 class="text-primary mb-1">{{ session['rounds_count'] }}</h5>
-                                    <small class="text-muted">对话轮次</small>
+                                    <h5 class="text-primary mb-1">{{ session['questions_count'] }}</h5>
+                                    <small class="text-muted">题目总数</small>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <h5 class="text-success mb-1">{{ session['questions_count'] }}</h5>
-                                <small class="text-muted">生成题目</small>
+                                <h5 class="text-success mb-1">{{ session['answered_count'] }}</h5>
+                                <small class="text-muted">已回答</small>
                             </div>
                         </div>
                     </div>
@@ -167,8 +152,8 @@
     </div>
 </div>
 <!-- 选择简历模态框 -->
-<div class="modal fade" id="selectResumeModal" tabindex="-1" aria-labelledby="selectResumeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade upload-modal" id="selectResumeModal" tabindex="-1" aria-labelledby="selectResumeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="selectResumeModalLabel">
@@ -187,7 +172,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="mt-3 p-3" style="background: rgba(102, 126, 234, 0.05); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.1);">
+                <div class="alert upload-modal-hint mb-0 mt-3">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-info-circle me-2" style="color: var(--accent-blue);"></i>
                         <small class="text-muted mb-0">没有简历？<a href="{{ url_for('room.resumes_list') }}" class="text-primary">点击上传简历</a></small>
@@ -201,20 +186,20 @@
     </div>
 </div>
 
-<!-- JD 上传模态框 -->
-<div class="modal fade" id="uploadJDModal" tabindex="-1" aria-labelledby="uploadJDModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<!-- JD 更新模态框 -->
+<div class="modal fade upload-modal" id="uploadJDModal" tabindex="-1" aria-labelledby="uploadJDModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="uploadJDModalLabel">
-                    <i class="fas fa-file-alt me-2"></i>上传职位描述(JD)
+                    <i class="fas fa-file-alt me-2"></i>更新职位描述(JD)
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p class="text-muted small mb-3">
                     <i class="fas fa-info-circle me-1"></i>
-                    上传 JD 后，本面试间的所有会话都会使用此 JD 生成面试题。如果不上传，将使用简历中的公司和职位从知识库检索相关 JD。
+                    更新 JD 后，本面试间的所有会话都会使用此 JD 生成面试题。如果不更新，将使用简历中的公司和职位从知识库检索相关 JD。
                 </p>
                 <div class="mb-3">
                     <label for="jdCompanyInput" class="form-label">公司名称（选填）</label>
@@ -234,7 +219,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                 <button type="button" class="btn btn-primary" onclick="uploadJD()">
                     <i class="fas fa-upload me-1"></i>
-                    上传 JD
+                    更新 JD
                 </button>
             </div>
         </div>
@@ -356,12 +341,14 @@ async function checkResumeStatus() {
 
         if (result.success && result.data.resume) {
             const resume = result.data.resume;
+            const resumeData = result.data.resume_data || {};
             const parseStatus = resume.parse_status || 'pending';
             const parseStatusDisplay = resume.parse_status_display || getParseStatusDisplay(parseStatus);
             const parseError = resume.parse_error || '';
-
-            const companyInfo = resume.company ?
-                `<p class="mb-1"><strong>目标公司：</strong>${resume.company}</p>` : '';
+            const displayPosition = (resume.position || resumeData.position || '').toString().trim() || '未知';
+            const displayCompany = (resume.company || resumeData.company || '').toString().trim();
+            const companyInfo = displayCompany ?
+                `<p class="mb-1"><strong>目标公司：</strong>${displayCompany}</p>` : '';
 
             if (parseStatus === 'parsed') {
                 statusAlert.classList.remove('d-none', 'alert-warning', 'alert-danger');
@@ -371,7 +358,7 @@ async function checkResumeStatus() {
                         <strong><i class="fas fa-check-circle me-1"></i> 已上传简历</strong>
                         <div class="mt-2">
                             <p class="mb-1"><strong>姓名：</strong>${resume.name || '未知'}</p>
-                            <p class="mb-1"><strong>应聘职位：</strong>${resume.position || '未知'}</p>
+                            <p class="mb-1"><strong>应聘职位：</strong>${displayPosition}</p>
                             <p class="mb-1"><strong>解析状态：</strong>${parseStatusDisplay}</p>
                             ${companyInfo}
                             <p class="mb-0 text-muted"><small>点击"更新简历"按钮可更新简历</small></p>
@@ -441,7 +428,7 @@ async function checkResumeStatus() {
     }
 }
 
-// 上传 JD
+// 更新 JD
 async function uploadJD() {
     const company = document.getElementById('jdCompanyInput').value.trim();
     const position = document.getElementById('jdPositionInput').value.trim();
@@ -453,7 +440,7 @@ async function uploadJD() {
     }
 
     try {
-        YeyingInterviewer.showToast('info', '正在上传 JD...');
+        YeyingInterviewer.showToast('info', '正在更新 JD...');
 
         const response = await fetch(`/api/v1/upload_jd/${ROOM_ID}`, {
             method: 'POST',
@@ -468,7 +455,7 @@ async function uploadJD() {
         const data = await response.json();
 
         if (data.success) {
-            YeyingInterviewer.showToast('success', 'JD 上传成功！本面试间的所有会话将使用此 JD');
+            YeyingInterviewer.showToast('success', 'JD 更新成功！本面试间的所有会话将使用此 JD');
 
             // 关闭模态框
             const modal = bootstrap.Modal.getInstance(document.getElementById('uploadJDModal'));
@@ -482,11 +469,11 @@ async function uploadJD() {
             // 更新按钮文本
             document.getElementById('uploadJDBtnText').textContent = '更新JD';
         } else {
-            YeyingInterviewer.showToast('error', data.message || 'JD 上传失败');
+            YeyingInterviewer.showToast('error', data.message || 'JD 更新失败');
         }
     } catch (error) {
-        console.error('上传 JD 失败:', error);
-        YeyingInterviewer.showToast('error', '上传 JD 失败');
+        console.error('更新 JD 失败:', error);
+        YeyingInterviewer.showToast('error', 'JD 更新失败');
     }
 }
 
@@ -615,11 +602,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 .modal-backdrop {
     z-index: 9999 !important;
 }
-/* 确保 Modal 对话框不被导航栏遮挡 */
-.modal-dialog {
-    margin-top: 100px !important;
-}
-
 /* 会话状态徽章样式 */
 .session-status-badge {
     font-weight: 500;
@@ -641,7 +623,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     background-color: #ffc107;
     color: #212529;
 }
-.session-status-badge.status-round_completed {
+.session-status-badge.status-completed {
     background-color: #28a745;
     color: white;
 }

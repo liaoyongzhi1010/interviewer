@@ -5,7 +5,7 @@
 
 from typing import Dict, Any
 from reportlab.lib.units import cm
-from reportlab.lib.colors import lightblue, darkblue, black
+from reportlab.lib.colors import lightblue, darkblue
 from reportlab.platypus import Table, TableStyle
 from backend.common.logger import get_logger
 
@@ -77,34 +77,3 @@ class PDFChartGenerator:
         ]))
 
         return info_table
-
-    def create_level_table(self, item_name: str, level: str) -> Table:
-        """
-        创建等级指示表格
-
-        Args:
-            item_name: 评估项名称
-            level: 等级（低/中/高）
-
-        Returns:
-            表格对象
-        """
-        level_data = [['', '低', '中', '高'], [item_name, '', '', '']]
-
-        # 根据等级设置标记
-        if level == '低':
-            level_data[1][1] = '●'
-        elif level == '中':
-            level_data[1][2] = '●'
-        else:
-            level_data[1][3] = '●'
-
-        level_table = Table(level_data, colWidths=[2*cm, 1*cm, 1*cm, 1*cm])
-        level_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), self.default_font),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (1, 0), (-1, -1), 0.5, black),
-        ]))
-
-        return level_table

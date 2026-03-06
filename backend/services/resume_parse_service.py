@@ -101,6 +101,19 @@ def _parse_resume_job(resume_id: str) -> None:
         if resume.position:
             structured_data['position'] = resume.position
 
+        parsed_company = str(structured_data.get('company') or '').strip() or None
+        parsed_position = str(structured_data.get('position') or '').strip() or None
+        db_company = str(resume.company or '').strip() or None
+        db_position = str(resume.position or '').strip() or None
+
+        # 将解析出的岗位/公司回填到数据库（仅在数据库为空时），避免前端展示“未知”。
+        if (not db_company and parsed_company) or (not db_position and parsed_position):
+            ResumeService.update_resume(
+                resume_id=resume_id,
+                company=db_company or parsed_company,
+                position=db_position or parsed_position,
+            )
+
         if not upload_resume_data(structured_data, resume_id):
             _fail_parse(resume_id, "保存结构化简历数据失败")
             return

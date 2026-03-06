@@ -624,29 +624,29 @@ $(document).ready(function() {
             info: '提示'
         };
         const durationMap = {
-            success: 3000,
-            error: 5000,
-            warning: 4000,
-            info: 3500
+            success: 1000,
+            error: 2000,
+            warning: 2000,
+            info: 2000
         };
         const level = titleMap[type] ? type : 'info';
         showUploadToast(level, titleMap[level], message, durationMap[level]);
     }
 
     function showErrorToast(message) {
-        showUploadToast('error', '上传失败', message, 5000);
+        showUploadToast('error', '上传失败', message, 2000);
     }
 
     function showSuccessToast(message) {
-        showUploadToast('success', '上传成功', message, 3000);
+        showUploadToast('success', '上传成功', message, 1000);
     }
 
     function showDeleteSuccessToast(message) {
-        showUploadToast('success', '删除成功', message, 2800);
+        showUploadToast('success', '删除成功', message, 1000);
     }
 
     function showRenameSuccessToast(message) {
-        showUploadToast('success', '重命名成功', message, 2800);
+        showUploadToast('success', '重命名成功', message, 1000);
     }
 
     function showUploadToast(type, title, message, duration) {
@@ -678,7 +678,7 @@ $(document).ready(function() {
         const alertInstance = bootstrap.Alert.getOrCreateInstance(toast[0]);
         setTimeout(function() {
             alertInstance.close();
-        }, duration || 3500);
+        }, duration || 2000);
 
         toast.on('closed.bs.alert', function() {
             $(this).remove();

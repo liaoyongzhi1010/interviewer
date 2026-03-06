@@ -1,16 +1,13 @@
 """页面路由（服务端模板渲染）。"""
-
-import threading
 from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
 from backend.api.deps import get_current_user_optional, is_valid_uuid
-from backend.clients.digitalhub_client import ping_dh
 from backend.clients.minio_client import download_resume_data, get_resume_pdf_url
 from backend.common.logger import get_logger
-from backend.services.interview_service import RoomService, RoundService, SessionService
+from backend.services.interview_service import RoomService, SessionService
 from backend.services.resume_service import ResumeService
 from backend.web.templates import render_template
 
@@ -29,37 +26,32 @@ def _require_page_user(request: Request) -> str | None:
 
 def _calculate_system_stats(rooms: list[Any]) -> dict[str, int]:
     total_sessions = 0
-    total_rounds = 0
     total_questions = 0
 
     for room in rooms:
         sessions = SessionService.get_sessions_by_room(room.id)
         total_sessions += len(sessions)
-
         for session in sessions:
-            rounds = RoundService.get_rounds_by_session(session.id)
-            total_rounds += len(rounds)
-            for round_obj in rounds:
-                total_questions += round_obj.questions_count
+            session_dict = SessionService.to_dict(session)
+            total_questions += int(session_dict.get("questions_count", 0))
 
     return {
         "total_rooms": len(rooms),
         "total_sessions": total_sessions,
-        "total_rounds": total_rounds,
         "total_questions": total_questions,
     }
 
 
-def _ping_digital_human_async() -> None:
-    def _async_ping() -> None:
-        try:
-            ping_dh()
-            logger.info("Digital human ping successful (async)")
-        except Exception as exc:
-            logger.warning("Failed to ping digital human (async): %s", exc)
-
-    thread = threading.Thread(target=_async_ping, daemon=True)
-    thread.start()
+def _build_interview_strategy() -> dict[str, Any]:
+    return {
+        "main_plan": [
+            {"label": "技能题", "count": 2},
+            {"label": "项目题", "count": 2},
+            {"label": "场景题", "count": 2},
+        ],
+        "follow_up_per_main": 1,
+        "follow_up_total_cap": 3,
+    }
 
 
 def _alert_back_html(message: str) -> HTMLResponse:
@@ -180,8 +172,6 @@ def room_detail(request: Request, room_id: str):
     if room.owner_address != current_user:
         return _redirect_to_index(request)
 
-    _ping_digital_human_async()
-
     sessions = SessionService.get_sessions_by_room(room_id)
     sessions_dict = [SessionService.to_dict(session) for session in sessions]
 
@@ -265,11 +255,9 @@ def session_detail(request: Request, session_id: str):
         request,
         "session.html",
         session=SessionService.to_dict(session),
-        rounds=[],
         resume=resume_data,
         has_custom_jd=has_custom_jd,
-        dh_message=None,
-        dh_connect_url=None,
+        interview_strategy=_build_interview_strategy(),
     )
 
 

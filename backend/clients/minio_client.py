@@ -4,7 +4,6 @@
 
 import json
 import os
-from io import StringIO
 from typing import Dict, Any, Optional
 from minio import Minio
 from minio.error import S3Error
@@ -110,17 +109,6 @@ class MinIOClient:
 
         except S3Error as e:
             logger.error(f"Error uploading {file_path}: {e}")
-            return False
-    
-    def download_file(self, object_name: str, file_path: str) -> bool:
-        """从MinIO下载文件到本地"""
-        try:
-            self.client.fget_object(self.bucket_name, object_name, file_path)
-            logger.info(f"Successfully downloaded {object_name} to {file_path}")
-            return True
-
-        except S3Error as e:
-            logger.error(f"Error downloading {object_name}: {e}")
             return False
     
     def list_objects(self, prefix: str = "") -> list:
@@ -305,134 +293,25 @@ def delete_resume_pdf(resume_id: str) -> bool:
     return minio_client.delete_object(object_name)
 
 
-def upload_questions_data(questions_data: Dict[str, Any], room_id: str, session_id: str, round_index: int) -> bool:
-    """
-    上传问题数据到MinIO
-
-    Args:
-        questions_data: 问题数据
-        room_id: 面试间ID
-        session_id: 会话ID
-        round_index: 轮次索引
-
-    Returns:
-        是否上传成功
-    """
-    object_name = f"rooms/{room_id}/sessions/{session_id}/questions/round_{round_index}.json"
-    return minio_client.upload_json(object_name, questions_data)
-
-
-def download_questions_data(room_id: str, session_id: str, round_index: int) -> Optional[Dict[str, Any]]:
-    """
-    从MinIO下载问题数据
-
-    Args:
-        room_id: 面试间ID
-        session_id: 会话ID
-        round_index: 轮次索引
-
-    Returns:
-        问题数据，如果不存在返回None
-    """
-    object_name = f"rooms/{room_id}/sessions/{session_id}/questions/round_{round_index}.json"
-    return minio_client.download_json(object_name)
-
-
-def upload_qa_analysis(analysis_data: Dict[str, Any], room_id: str, session_id: str, round_index: int) -> bool:
-    """
-    上传QA分析数据到MinIO
-
-    Args:
-        analysis_data: 分析数据
-        room_id: 面试间ID
-        session_id: 会话ID
-        round_index: 轮次索引
-
-    Returns:
-        是否上传成功
-    """
-    object_name = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_index}.json"
+def upload_qa_analysis(analysis_data: Dict[str, Any], room_id: str, session_id: str) -> bool:
+    """上传会话 QA 分析数据。"""
+    object_name = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete.json"
     return minio_client.upload_json(object_name, analysis_data)
 
 
-def download_qa_analysis(room_id: str, session_id: str, round_index: int) -> Optional[Dict[str, Any]]:
-    """
-    从MinIO下载QA分析数据
-
-    Args:
-        room_id: 面试间ID
-        session_id: 会话ID
-        round_index: 轮次索引
-
-    Returns:
-        分析数据，如果不存在返回None
-    """
-    object_name = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete_{round_index}.json"
+def download_qa_analysis(room_id: str, session_id: str) -> Optional[Dict[str, Any]]:
+    """下载会话 QA 分析数据。"""
+    object_name = f"rooms/{room_id}/sessions/{session_id}/analysis/qa_complete.json"
     return minio_client.download_json(object_name)
 
 
-def upload_evaluation_report(report_data: Dict[str, Any], room_id: str, session_id: str, round_index: int) -> bool:
-    """
-    上传评估报告数据到MinIO
-
-    Args:
-        report_data: 报告数据
-        room_id: 面试间ID
-        session_id: 会话ID
-        round_index: 轮次索引
-
-    Returns:
-        是否上传成功
-    """
-    object_name = f"rooms/{room_id}/sessions/{session_id}/reports/evaluation_{round_index}.json"
+def upload_evaluation_report(report_data: Dict[str, Any], room_id: str, session_id: str) -> bool:
+    """上传会话评估报告。"""
+    object_name = f"rooms/{room_id}/sessions/{session_id}/reports/evaluation.json"
     return minio_client.upload_json(object_name, report_data)
 
 
-def download_evaluation_report(room_id: str, session_id: str, round_index: int) -> Optional[Dict[str, Any]]:
-    """
-    从MinIO下载评估报告数据
-
-    Args:
-        room_id: 面试间ID
-        session_id: 会话ID
-        round_index: 轮次索引
-
-    Returns:
-        报告数据，如果不存在返回None
-    """
-    object_name = f"rooms/{room_id}/sessions/{session_id}/reports/evaluation_{round_index}.json"
+def download_evaluation_report(room_id: str, session_id: str) -> Optional[Dict[str, Any]]:
+    """下载会话评估报告。"""
+    object_name = f"rooms/{room_id}/sessions/{session_id}/reports/evaluation.json"
     return minio_client.download_json(object_name)
-
-
-def upload_pdf_report(pdf_file_path: str, room_id: str, session_id: str, round_index: int) -> bool:
-    """
-    上传PDF报告到MinIO
-
-    Args:
-        pdf_file_path: PDF文件路径
-        room_id: 面试间ID
-        session_id: 会话ID
-        round_index: 轮次索引
-
-    Returns:
-        是否上传成功
-    """
-    object_name = f"rooms/{room_id}/sessions/{session_id}/reports/report_{round_index}.pdf"
-    return minio_client.upload_file(object_name, pdf_file_path)
-
-
-def download_pdf_report_url(room_id: str, session_id: str, round_index: int, expires_hours: int = 24) -> Optional[str]:
-    """
-    获取PDF报告的预签名下载URL
-
-    Args:
-        room_id: 面试间ID
-        session_id: 会话ID
-        round_index: 轮次索引
-        expires_hours: URL有效期（小时）
-
-    Returns:
-        预签名URL，如果文件不存在返回None
-    """
-    object_name = f"rooms/{room_id}/sessions/{session_id}/reports/report_{round_index}.pdf"
-    return minio_client.get_presigned_url(object_name, expires_hours)

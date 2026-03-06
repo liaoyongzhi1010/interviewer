@@ -146,9 +146,9 @@
                         <div class="col-6">
                             <div style="padding: 0.75rem 0;">
                                 <h5 class="mb-1" style="color: var(--accent-green); font-size: 1.75rem; font-weight: 700;">
-                                    {{ room.rounds_count }}
+                                    {{ room.questions_count }}
                                 </h5>
-                                <small class="text-muted">轮次</small>
+                                <small class="text-muted">题目</small>
                             </div>
                         </div>
                     </div>
@@ -195,67 +195,15 @@
     </div>
 
     <div class="row g-4 mb-5">
-        <!-- 示例错题卡片 -->
-        <div class="col-lg-6">
-            <div class="card mistake-card h-100" style="transition: all 0.3s ease;">
-                <div class="card-header d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="badge me-2" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 0.4rem 0.8rem; border-radius: 6px;">算法</span>
-                            <span class="badge" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24; padding: 0.4rem 0.8rem; border-radius: 6px;">中等</span>
-                        </div>
-                        <h6 class="mb-1 fw-bold">实现 LRU 缓存淘汰算法</h6>
-                        <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i>收藏于 2024-01-15</small>
-                    </div>
-                    <button class="btn btn-sm btn-light" style="border-radius: 8px;">
-                        <i class="fas fa-bookmark" style="color: #fbbf24;"></i>
-                    </button>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-2" style="font-size: 0.9rem; line-height: 1.5;">
-                        设计并实现一个满足 LRU (最近最少使用) 缓存约束的数据结构...
-                    </p>
-                    <div class="d-flex gap-2">
-                        <span class="badge" style="background: rgba(102, 126, 234, 0.1); color: var(--accent-blue); padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.8rem;">
-                            <i class="fas fa-hashtag me-1"></i>哈希表
-                        </span>
-                    </div>
-                </div>
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <small class="text-muted"><i class="fas fa-redo me-1"></i>复习 2 次</small>
-                    <button class="btn btn-sm btn-primary" style="border-radius: 8px;">查看</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card mistake-card h-100" style="transition: all 0.3s ease;">
-                <div class="card-header d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="badge me-2" style="background: rgba(79, 172, 254, 0.1); color: #4facfe; padding: 0.4rem 0.8rem; border-radius: 6px;">前端</span>
-                            <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-green); padding: 0.4rem 0.8rem; border-radius: 6px;">简单</span>
-                        </div>
-                        <h6 class="mb-1 fw-bold">解释 React Hooks 的闭包陷阱</h6>
-                        <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i>收藏于 2024-01-14</small>
-                    </div>
-                    <button class="btn btn-sm btn-light" style="border-radius: 8px;">
-                        <i class="fas fa-bookmark" style="color: #fbbf24;"></i>
-                    </button>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-2" style="font-size: 0.9rem; line-height: 1.5;">
-                        在使用 useState 和 useEffect 时，如何避免闭包导致的状态不更新问题...
-                    </p>
-                    <div class="d-flex gap-2">
-                        <span class="badge" style="background: rgba(102, 126, 234, 0.1); color: var(--accent-blue); padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.8rem;">
-                            <i class="fas fa-hashtag me-1"></i>React
-                        </span>
-                    </div>
-                </div>
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <small class="text-muted"><i class="fas fa-redo me-1"></i>复习 1 次</small>
-                    <button class="btn btn-sm btn-primary" style="border-radius: 8px;">查看</button>
+        <div class="col-12">
+            <div class="card h-100" style="border: 1px dashed rgba(148, 163, 184, 0.4); background: rgba(248, 250, 252, 0.8);">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-bookmark mb-3" style="font-size: 1.8rem; color: #fbbf24; opacity: 0.85;"></i>
+                    <h6 class="fw-bold mb-2">已移除示例错题</h6>
+                    <p class="text-muted mb-3">概览页不再展示 mock 题目，请到错题集查看真实收藏数据。</p>
+                    <a href="{{ url_for('room.mistakes_list') }}" class="btn btn-outline-warning btn-sm" style="border-radius: 8px;">
+                        前往错题集
+                    </a>
                 </div>
             </div>
         </div>
@@ -308,11 +256,11 @@
 </div>
 
 <!-- 选择简历模态框 -->
-<div class="modal fade" id="selectResumeModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade upload-modal" id="selectResumeModal" tabindex="-1" aria-labelledby="selectResumeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">选择简历创建面试间</h5>
+                <h5 class="modal-title" id="selectResumeModalLabel">选择简历创建面试间</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -325,7 +273,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="mt-3 p-3" style="background: rgba(102, 126, 234, 0.05); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.1);">
+                <div class="alert upload-modal-hint mb-0 mt-3">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-info-circle me-2" style="color: var(--accent-blue);"></i>
                         <small class="text-muted mb-0">没有简历？<a href="{{ url_for('room.resumes_list') }}" class="text-primary">点击上传简历</a></small>
@@ -340,20 +288,22 @@
 </div>
 
 <!-- 删除面试间确认模态框 -->
-<div class="modal fade" id="deleteRoomModal" tabindex="-1">
+<div class="modal fade resume-action-modal resume-action-modal-danger" id="deleteRoomModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header border-0">
+            <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2" style="color: #ef4444;"></i>
-                    确认删除
+                    <span class="resume-action-icon">
+                        <i class="fas fa-trash"></i>
+                    </span>
+                    删除面试间
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-0" id="deleteRoomText">确定要删除这个面试间吗？此操作不可恢复。</p>
+                <div id="deleteRoomText" class="resume-action-message">确定要删除这个面试间吗？此操作不可恢复。</div>
             </div>
-            <div class="modal-footer border-0">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>取消
                 </button>
@@ -517,39 +467,6 @@
     </div>
 </div>
 
-<!-- 创建面试间 Loading 遮罩层 -->
-<div id="createRoomLoading" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 9999; backdrop-filter: blur(5px);">
-    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: white; padding: 3rem 4rem; border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); min-width: 400px;">
-        <div style="margin-bottom: 2rem;">
-            <div class="spinner-border" role="status" style="width: 3rem; height: 3rem; color: var(--accent-blue);">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-        <h5 class="fw-bold mb-4" style="color: #2d3748;">正在创建面试间...</h5>
-        <div style="text-align: left; max-width: 320px; margin: 0 auto;">
-            <div class="loading-step" id="step1" style="padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0;">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-grow spinner-grow-sm me-3" style="color: var(--accent-blue); width: 1rem; height: 1rem;"></div>
-                    <span style="color: #4a5568; font-size: 0.95rem;">正在分配资源</span>
-                </div>
-            </div>
-            <div class="loading-step" id="step2" style="padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0; opacity: 0.5;">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-grow spinner-grow-sm me-3" style="color: var(--accent-blue); width: 1rem; height: 1rem;"></div>
-                    <span style="color: #4a5568; font-size: 0.95rem;">正在初始化 AI 记忆体</span>
-                </div>
-            </div>
-            <div class="loading-step" id="step3" style="padding: 0.75rem 0; opacity: 0.5;">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-grow spinner-grow-sm me-3" style="color: var(--accent-blue); width: 1rem; height: 1rem;"></div>
-                    <span style="color: #4a5568; font-size: 0.95rem;">正在完成创建</span>
-                </div>
-            </div>
-        </div>
-        <p class="text-muted mt-4 mb-0" style="font-size: 0.85rem;">预计需要 10-15 秒，请耐心等待</p>
-    </div>
-</div>
-
 <style>
 /* 统一卡片高度 */
 .resume-card,
@@ -591,6 +508,22 @@
 .mistake-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 强制“选择简历创建面试间”弹窗居中，并在简历较多时内部滚动 */
+#selectResumeModal .modal-dialog {
+    min-height: calc(100% - 3.5rem);
+    display: flex;
+    align-items: center;
+}
+
+#selectResumeModal .modal-content {
+    width: 100%;
+}
+
+#resumeSelectList {
+    max-height: 42vh;
+    overflow-y: auto;
 }
 </style>
 {% endblock %}
@@ -731,10 +664,10 @@ $(document).ready(function() {
             info: '提示'
         };
         const durationMap = {
-            success: 3000,
-            error: 5000,
-            warning: 4000,
-            info: 3500
+            success: 1000,
+            error: 2000,
+            warning: 2000,
+            info: 2000
         };
         const level = titleMap[type] ? type : 'info';
         showUploadToast(level, titleMap[level], message, durationMap[level]);
@@ -753,19 +686,19 @@ $(document).ready(function() {
     }
 
     function showErrorToast(message) {
-        showUploadToast('error', '上传失败', message, 5000);
+        showUploadToast('error', '上传失败', message, 2000);
     }
 
     function showSuccessToast(message) {
-        showUploadToast('success', '上传成功', message, 3000);
+        showUploadToast('success', '上传成功', message, 1000);
     }
 
     function showDeleteSuccessToast(message) {
-        showUploadToast('success', '删除成功', message, 2800);
+        showUploadToast('success', '删除成功', message, 1000);
     }
 
     function showRenameSuccessToast(message) {
-        showUploadToast('success', '重命名成功', message, 2800);
+        showUploadToast('success', '重命名成功', message, 1000);
     }
 
     function consumePendingDeleteToast() {
@@ -876,7 +809,7 @@ $(document).ready(function() {
         const alertInstance = bootstrap.Alert.getOrCreateInstance(toast[0]);
         setTimeout(function() {
             alertInstance.close();
-        }, duration || 3500);
+        }, duration || 2000);
 
         toast.on('closed.bs.alert', function() {
             $(this).remove();
@@ -1014,24 +947,6 @@ $(document).ready(function() {
         // 隐藏选择对话框
         selectResumeModal.hide();
 
-        // 显示 loading 遮罩
-        $('#createRoomLoading').fadeIn(300);
-
-        // 步骤动画
-        setTimeout(function() {
-            $('#step1').css('opacity', '1');
-        }, 300);
-
-        setTimeout(function() {
-            $('#step1').find('.spinner-grow').replaceWith('<i class="fas fa-check-circle me-3" style="color: var(--accent-green);"></i>');
-            $('#step2').css('opacity', '1');
-        }, 2000);
-
-        setTimeout(function() {
-            $('#step2').find('.spinner-grow').replaceWith('<i class="fas fa-check-circle me-3" style="color: var(--accent-green);"></i>');
-            $('#step3').css('opacity', '1');
-        }, 5000);
-
         // 发送创建请求
         $.ajax({
             url: '/api/v1/rooms/create',
@@ -1045,12 +960,10 @@ $(document).ready(function() {
                     // 创建成功，跳转到面试间详情页
                     window.location.href = `/room/${response.data.room_id}`;
                 } else {
-                    $('#createRoomLoading').hide();
                     showToast('error', '创建失败：' + (response.message || '未知错误'));
                 }
             },
             error: function(xhr) {
-                $('#createRoomLoading').hide();
                 const response = xhr.responseJSON;
                 showToast('error', '创建失败：' + (response?.message || '网络错误'));
             }
@@ -1209,7 +1122,7 @@ $(document).ready(function() {
 // 全局函数：删除面试间
 window.deleteRoom = function(roomId, roomName) {
     roomToDelete = roomId;
-    $('#deleteRoomText').text(`确定要删除面试间 "${roomName}" 吗？此操作不可恢复。`);
+    $('#deleteRoomText').html(buildDeleteRoomMessageHtml(roomName));
     deleteRoomModal.show();
 };
 
@@ -1278,6 +1191,16 @@ function buildDeleteResumeMessageHtml(resumeName, linkedRooms) {
     `;
 }
 
+function buildDeleteRoomMessageHtml(roomName) {
+    const safeRoomName = escapeDeleteHtml(roomName || '该面试间');
+    return `
+        <div class="resume-delete-summary">
+            <p class="resume-delete-title">确认删除「${safeRoomName}」？</p>
+            <p class="resume-delete-note">此操作不可恢复，会同步删除该面试间下的会话与问答记录。</p>
+        </div>
+    `;
+}
+
 // 全局函数：删除简历
 window.deleteResume = function(resumeId, resumeName, linkedRooms) {
     resumeToDelete = resumeId;
@@ -1301,12 +1224,5 @@ window.renameResume = function(resumeId, currentName) {
     renameResumeModal.show();
 };
 
-// 修复浏览器后退按钮导致 loading 遮罩卡住的问题
-window.addEventListener('pageshow', function(event) {
-    // 如果是通过后退/前进按钮访问的页面，隐藏 loading 遮罩
-    if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
-        $('#createRoomLoading').hide();
-    }
-});
 </script>
 {% endblock %}

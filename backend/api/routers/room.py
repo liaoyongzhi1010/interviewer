@@ -1,30 +1,14 @@
 """面试间相关 API 路由。"""
 
-import threading
-
 from fastapi import APIRouter, Request
 
 from backend.api.deps import ensure_room_owner, is_valid_uuid, require_api_user
 from backend.api.response import ApiResponse
 from backend.api.schemas import CreateRoomRequest, UpdateRoomRequest, UpdateRoomResumeRequest
-from backend.clients.digitalhub_client import ping_dh
-from backend.common.logger import get_logger
 from backend.services.interview_service import RoomService
 from backend.services.resume_service import ResumeService
 
-logger = get_logger(__name__)
-
 router = APIRouter(tags=["Room"])
-
-
-def _ping_digital_human_async() -> None:
-    def _ping() -> None:
-        try:
-            ping_dh()
-        except Exception as exc:
-            logger.warning("Failed to ping digital human: %s", exc)
-
-    threading.Thread(target=_ping, daemon=True).start()
 
 
 @router.post("/api/v1/rooms/create")
@@ -32,8 +16,6 @@ def create_room(request: Request, payload: CreateRoomRequest | None = None):
     current_user, auth_error = require_api_user(request)
     if auth_error:
         return auth_error
-
-    _ping_digital_human_async()
 
     resume_id = payload.resume_id if payload else None
     if resume_id:

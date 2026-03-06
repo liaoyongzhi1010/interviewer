@@ -12,7 +12,3 @@ class UploadJDRequest(BaseModel):
 class SaveAnswerRequest(BaseModel):
     qa_id: str
     answer_text: str
-
-
-class QACompletionRequest(BaseModel):
-    idempotency_key: str | None = None

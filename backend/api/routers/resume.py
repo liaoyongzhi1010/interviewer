@@ -293,7 +293,10 @@ def get_resume_by_room(request: Request, room_id: str):
             return ApiResponse.success(data={"resume": None}, message="关联的简历不存在")
 
         resume_data = None
-        if resume.parse_status == "parsed":
+        # 优先使用数据库字段；仅在关键展示字段缺失时再回源 MinIO，减少页面加载延迟。
+        db_company = (resume.company or "").strip()
+        db_position = (resume.position or "").strip()
+        if resume.parse_status == "parsed" and (not db_company or not db_position):
             resume_data = download_resume_data(resume.id)
 
         return ApiResponse.success(

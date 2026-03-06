@@ -104,10 +104,10 @@ function bindGlobalEvents() {
 
 function getToastMeta(type) {
     const meta = {
-        success: { icon: 'fa-check-circle', className: 'upload-toast-success', title: '成功', duration: 3000 },
-        error: { icon: 'fa-circle-xmark', className: 'upload-toast-error', title: '操作失败', duration: 5000 },
-        warning: { icon: 'fa-triangle-exclamation', className: 'upload-toast-warning', title: '请注意', duration: 4000 },
-        info: { icon: 'fa-circle-info', className: 'upload-toast-info', title: '提示', duration: 3500 }
+        success: { icon: 'fa-check-circle', className: 'upload-toast-success', title: '成功', duration: 1000 },
+        error: { icon: 'fa-circle-xmark', className: 'upload-toast-error', title: '操作失败', duration: 2000 },
+        warning: { icon: 'fa-triangle-exclamation', className: 'upload-toast-warning', title: '请注意', duration: 2000 },
+        info: { icon: 'fa-circle-info', className: 'upload-toast-info', title: '提示', duration: 2000 }
     };
     return meta[type] || meta.info;
 }
@@ -195,33 +195,16 @@ function throttle(func, limit) {
 
 // 工具函数：复制到剪贴板
 function copyToClipboard(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-        // 现代浏览器使用Clipboard API
-        return navigator.clipboard.writeText(text).then(() => {
-            showToast('success', '已复制到剪贴板');
-        }).catch(() => {
-            showToast('error', '复制失败');
-        });
-    } else {
-        // 兼容旧浏览器
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-            document.execCommand('copy');
-            textArea.remove();
-            showToast('success', '已复制到剪贴板');
-        } catch (err) {
-            textArea.remove();
-            showToast('error', '复制失败');
-        }
+    if (!navigator.clipboard || !window.isSecureContext) {
+        showToast('error', '当前环境不支持剪贴板 API');
+        return Promise.resolve();
     }
+
+    return navigator.clipboard.writeText(text).then(() => {
+        showToast('success', '已复制到剪贴板');
+    }).catch(() => {
+        showToast('error', '复制失败');
+    });
 }
 
 // 工具函数：加载状态管理

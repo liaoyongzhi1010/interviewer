@@ -1,42 +1,50 @@
-"""
-面试问题生成服务
-负责根据简历生成面试题
-"""
+"""面试题生成服务（按会话单次生成）。"""
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from sqlalchemy import func, select
+
 from backend.clients.llm.qwen_client import QwenClient
-from backend.clients.rag_client import get_rag_client
+from backend.common.config import config
 from backend.common.logger import get_logger
-from backend.models import QuestionAnswer, db_session
-from backend.services.interview_service import RoundService
+from backend.models import QuestionAnswer, SessionLocal, db_session
 
 logger = get_logger(__name__)
 
 
 class QuestionGenerator:
-    """面试题生成器"""
+    """面试题生成器。"""
+
+    MAIN_CATEGORY_ORDER = ["基础题", "项目题", "场景题"]
+    MAIN_TARGET_PER_CATEGORY = 2
 
     def __init__(self):
         self.qwen_client = QwenClient()
-        self.use_rag = True
 
     def generate_questions(self, session_id: str) -> Optional[Dict[str, Any]]:
-        """为指定会话生成面试题。"""
+        """为指定会话生成面试题（每个会话仅允许一次）。"""
         try:
             from backend.services.interview_service import SessionService
             from backend.services.resume_service import ResumeService
 
-            session = SessionService.get_session(session_id)
-            if not session:
+            interview_session = SessionService.get_session(session_id)
+            if not interview_session:
                 return {"success": False, "error": "会话不存在"}
 
-            room_id = session.room.id
-            room = session.room
+            if self._has_generated_questions(session_id):
+                existing_questions = self._load_existing_questions(session_id)
+                return {
+                    "success": True,
+                    "questions": existing_questions.get("questions", []),
+                    "question_count": len(existing_questions.get("questions", [])),
+                    "categorized_questions": existing_questions.get("categorized_questions", {}),
+                    "already_generated": True,
+                }
+
+            room = interview_session.room
 
             if not room.resume_id:
                 return {"success": False, "error": "该面试间还未关联简历，请先关联简历"}
@@ -56,66 +64,115 @@ class QuestionGenerator:
             if not resume_data:
                 return {"success": False, "error": "简历解析结果尚未就绪，请稍后重试"}
 
-            if self.use_rag:
+            target_position = str(resume_data.get("position") or resume.position or "").strip()
+            if not target_position:
+                return {"success": False, "error": "生成面试题前请先补充目标岗位（可在简历信息中填写职位）"}
+            resume_data["position"] = target_position
+
+            categorized_questions: Dict[str, List[str]]
+            all_questions: List[str]
+            if config.RAG_ENABLED:
                 try:
-                    questions_result = self._generate_questions_via_rag(
+                    rag_result = self._generate_questions_via_rag(
                         memory_id=room.memory_id,
+                        resume_id=str(room.resume_id),
                         resume_data=resume_data,
-                        resume_id=room.resume_id,
                         jd_id=room.jd_id,
                     )
-                    all_questions = questions_result["questions"]
-                    categorized_questions = {"RAG生成": all_questions}
+                    rag_questions = rag_result.get("questions", [])
+                    categorized_questions = {"RAG生成": rag_questions}
+                    categorized_questions, ordered_questions = self._select_main_questions_plan(
+                        categorized_questions,
+                        per_category=self.MAIN_TARGET_PER_CATEGORY,
+                    )
+                    all_questions = self._merge_ordered_questions(ordered_questions)
+                    if not all_questions:
+                        raise ValueError("RAG 返回空题目")
+                    logger.info("Generated %s questions via RAG for session %s", len(all_questions), session_id)
                 except Exception as exc:
-                    logger.error("Failed to generate questions via RAG: %s", exc)
-                    logger.info("Fallback to Qwen client")
+                    logger.warning("Failed to generate questions via RAG, fallback to Qwen: %s", exc)
                     resume_content = self._format_resume_for_llm(resume_data)
-                    categorized_questions = self.qwen_client.generate_questions(resume_content)
-                    all_questions = self._merge_questions(categorized_questions)
+                    request_count_per_category = max(3, self.MAIN_TARGET_PER_CATEGORY)
+                    categorized_questions = self.qwen_client.generate_questions(
+                        resume_content,
+                        question_types={category: request_count_per_category for category in self.MAIN_CATEGORY_ORDER},
+                    )
+                    categorized_questions, ordered_questions = self._select_main_questions_plan(
+                        categorized_questions,
+                        per_category=self.MAIN_TARGET_PER_CATEGORY,
+                    )
+                    all_questions = self._merge_ordered_questions(ordered_questions)
             else:
                 resume_content = self._format_resume_for_llm(resume_data)
-                categorized_questions = self.qwen_client.generate_questions(resume_content)
-                all_questions = self._merge_questions(categorized_questions)
+                request_count_per_category = max(3, self.MAIN_TARGET_PER_CATEGORY)
+                categorized_questions = self.qwen_client.generate_questions(
+                    resume_content,
+                    question_types={category: request_count_per_category for category in self.MAIN_CATEGORY_ORDER},
+                )
+                categorized_questions, ordered_questions = self._select_main_questions_plan(
+                    categorized_questions,
+                    per_category=self.MAIN_TARGET_PER_CATEGORY,
+                )
+                all_questions = self._merge_ordered_questions(ordered_questions)
 
             if not all_questions:
                 raise ValueError("未能生成面试题")
 
-            round_obj = RoundService.create_round(session_id, all_questions)
-            if not round_obj:
-                raise ValueError("创建轮次失败")
-
-            self._create_question_answer_records(round_obj.id, categorized_questions)
-
-            success = self._save_questions_to_minio(
-                all_questions,
-                round_obj,
-                room_id,
-                session_id,
-                categorized_questions,
-            )
-            if not success:
-                logger.warning("Failed to save questions to MinIO for round %s", round_obj.id)
+            self._create_question_answer_records(session_id, ordered_questions)
 
             return {
                 "success": True,
-                "round_id": round_obj.id,
                 "questions": all_questions,
-                "round_index": round_obj.round_index,
+                "question_count": len(all_questions),
                 "categorized_questions": categorized_questions,
+                "already_generated": False,
             }
 
         except Exception as exc:
             logger.error("Error generating questions: %s", exc, exc_info=True)
             return {"success": False, "error": str(exc)}
 
+    def _has_generated_questions(self, session_id: str) -> bool:
+        with SessionLocal() as session:
+            count = session.scalar(
+                select(func.count(QuestionAnswer.id)).where(QuestionAnswer.session_id == session_id)
+            ) or 0
+        return int(count) > 0
+
+    def _load_existing_questions(self, session_id: str) -> Dict[str, Any]:
+        with SessionLocal() as session:
+            qa_rows = (
+                session.execute(
+                    select(QuestionAnswer)
+                    .where(QuestionAnswer.session_id == session_id)
+                    .order_by(QuestionAnswer.question_index)
+                )
+                .scalars()
+                .all()
+            )
+
+        categorized: Dict[str, List[str]] = {}
+        ordered_questions: List[str] = []
+        for qa in qa_rows:
+            category = qa.question_category or "未分类"
+            categorized.setdefault(category, []).append(qa.question_text)
+            ordered_questions.append(f"【{category}】{qa.question_text}")
+
+        return {
+            "questions": ordered_questions,
+            "categorized_questions": categorized,
+        }
+
     def _generate_questions_via_rag(
         self,
         memory_id: str,
-        resume_data: Dict[str, Any],
         resume_id: str,
+        resume_data: Dict[str, Any],
         jd_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """通过 RAG 服务生成问题。"""
+        from backend.clients.rag_client import get_rag_client
+
         rag_client = get_rag_client()
         resume_url = f"resumes/{resume_id}/resume.json"
 
@@ -130,8 +187,15 @@ class QuestionGenerator:
             max_chars=4000,
         )
 
-        logger.info("Generated %s questions via RAG for memory %s", len(result["questions"]), memory_id)
-        return result
+        questions = [
+            str(question).strip()
+            for question in result.get("questions", [])
+            if str(question).strip()
+        ]
+        return {
+            "questions": questions,
+            "context_used": result.get("context_used"),
+        }
 
     def _format_resume_for_llm(self, resume_data: Dict[str, Any]) -> str:
         """格式化简历数据供 LLM 使用。"""
@@ -155,53 +219,84 @@ class QuestionGenerator:
 
         return content.strip()
 
-    def _merge_questions(self, categorized_questions: Dict[str, List[str]]) -> List[str]:
-        """合并分类问题为单一列表。"""
-        all_questions: list[str] = []
-        for category, questions in categorized_questions.items():
-            for question in questions:
-                all_questions.append(f"【{category}】{question}")
-        return all_questions
+    def _merge_ordered_questions(self, ordered_questions: List[tuple[str, str]]) -> List[str]:
+        """按既定顺序合并问题文本。"""
+        return [f"【{category}】{question}" for category, question in ordered_questions]
 
-    def _create_question_answer_records(self, round_id: str, categorized_questions: Dict[str, List[str]]) -> None:
-        """为轮次创建问答记录。"""
-        question_index = 0
-        with db_session() as session:
-            for category, questions in categorized_questions.items():
-                for question in questions:
-                    session.add(
-                        QuestionAnswer(
-                            id=str(uuid.uuid4()),
-                            round_id=round_id,
-                            question_index=question_index,
-                            question_text=question,
-                            question_category=category,
-                            is_answered=False,
-                        )
-                    )
-                    question_index += 1
-
-    def _save_questions_to_minio(
+    def _select_main_questions_plan(
         self,
-        all_questions: List[str],
-        round_obj,
-        room_id: str,
-        session_id: str,
         categorized_questions: Dict[str, List[str]],
-    ) -> bool:
-        """保存问题到 MinIO（使用新的目录结构）。"""
-        from backend.clients.minio_client import upload_questions_data
+        per_category: int,
+    ) -> tuple[Dict[str, List[str]], List[tuple[str, str]]]:
+        """
+        选择主问题方案：
+        - 目标：基础题/项目题/场景题各 `per_category` 道
+        - 若某类不足，使用其它类别题目补齐
+        - 输出顺序按“技能->项目->场景”交错排列
+        """
+        if per_category <= 0:
+            return {}, []
 
-        qa_data = {
-            "questions": all_questions,
-            "round_id": round_obj.id,
-            "session_id": session_id,
-            "room_id": room_id,
-            "round_index": round_obj.round_index,
-            "total_count": len(all_questions),
-            "generated_at": datetime.now().isoformat(),
-            "categorized_questions": categorized_questions,
-        }
+        normalized: Dict[str, List[str]] = {}
+        for category, questions in categorized_questions.items():
+            normalized[category] = [str(question).strip() for question in questions if str(question).strip()]
 
-        return upload_questions_data(qa_data, room_id, session_id, round_obj.round_index)
+        selected: Dict[str, List[str]] = {category: [] for category in self.MAIN_CATEGORY_ORDER}
+        used_questions: set[str] = set()
 
+        # 先取同类题目，尽量满足2/2/2分类目标。
+        for category in self.MAIN_CATEGORY_ORDER:
+            for question in normalized.get(category, []):
+                if len(selected[category]) >= per_category:
+                    break
+                if question in used_questions:
+                    continue
+                selected[category].append(question)
+                used_questions.add(question)
+
+        # 回收池：把剩余题目作为补位来源。
+        fallback_pool: List[str] = []
+        ordered_pool_categories = self.MAIN_CATEGORY_ORDER + [
+            category for category in normalized.keys() if category not in self.MAIN_CATEGORY_ORDER
+        ]
+        for category in ordered_pool_categories:
+            for question in normalized.get(category, []):
+                if question in used_questions:
+                    continue
+                fallback_pool.append(question)
+                used_questions.add(question)
+
+        # 对短缺类别进行补位。
+        for category in self.MAIN_CATEGORY_ORDER:
+            while len(selected[category]) < per_category and fallback_pool:
+                selected[category].append(fallback_pool.pop(0))
+
+        # 交错顺序输出：技能->项目->场景，再循环下一轮。
+        ordered_questions: List[tuple[str, str]] = []
+        for index in range(per_category):
+            for category in self.MAIN_CATEGORY_ORDER:
+                if index < len(selected[category]):
+                    ordered_questions.append((category, selected[category][index]))
+
+        selected_trimmed = {category: questions for category, questions in selected.items() if questions}
+        return selected_trimmed, ordered_questions
+
+    def _create_question_answer_records(self, session_id: str, ordered_questions: List[tuple[str, str]]) -> None:
+        """为会话创建问答记录。"""
+        with db_session() as session:
+            for question_index, (category, question) in enumerate(ordered_questions):
+                session.add(
+                    QuestionAnswer(
+                        id=str(uuid.uuid4()),
+                        session_id=session_id,
+                        parent_qa_id=None,
+                        question_index=question_index,
+                        depth=0,
+                        question_type="main",
+                        question_text=question,
+                        answer_score=None,
+                        answer_eval_brief=None,
+                        question_category=category,
+                        is_answered=False,
+                    )
+                )

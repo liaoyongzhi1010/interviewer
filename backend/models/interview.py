@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.base import BaseModel
@@ -37,68 +35,34 @@ class Session(BaseModel):
     name: Mapped[str] = mapped_column(String, nullable=False)
     room_id: Mapped[str] = mapped_column(ForeignKey("rooms.id", ondelete="CASCADE"), index=True, nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="initialized", nullable=False)
-    current_round: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     room: Mapped[Room] = relationship(back_populates="sessions")
-    rounds: Mapped[list["Round"]] = relationship(
-        back_populates="session",
-        cascade="all, delete-orphan",
-    )
-    round_completions: Mapped[list["RoundCompletion"]] = relationship(
-        back_populates="session",
-        cascade="all, delete-orphan",
-    )
-
-
-class Round(BaseModel):
-    """面试轮次模型。"""
-
-    __tablename__ = "rounds"
-
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True, nullable=False)
-    round_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    questions_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    questions_file_path: Mapped[str] = mapped_column(String, nullable=False)
-    round_type: Mapped[str] = mapped_column(String(32), default="ai_generated", nullable=False)
-    current_question_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
-
-    session: Mapped[Session] = relationship(back_populates="rounds")
     question_answers: Mapped[list["QuestionAnswer"]] = relationship(
-        back_populates="round",
+        back_populates="session",
         cascade="all, delete-orphan",
     )
 
 
 class QuestionAnswer(BaseModel):
-    """轮次问答记录模型。"""
+    """会话问答记录模型。"""
 
     __tablename__ = "question_answers"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    round_id: Mapped[str] = mapped_column(ForeignKey("rounds.id", ondelete="CASCADE"), index=True, nullable=False)
+    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True, nullable=False)
+    parent_qa_id: Mapped[str | None] = mapped_column(
+        ForeignKey("question_answers.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
     question_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    depth: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    question_type: Mapped[str] = mapped_column(String(32), default="main", nullable=False)
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
     answer_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    answer_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    answer_eval_brief: Mapped[str | None] = mapped_column(Text, nullable=True)
     question_category: Mapped[str | None] = mapped_column(String, nullable=True)
     is_answered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    round: Mapped[Round] = relationship(back_populates="question_answers")
-
-
-class RoundCompletion(BaseModel):
-    """轮次完成幂等记录模型。"""
-
-    __tablename__ = "round_completions"
-    __table_args__ = (UniqueConstraint("session_id", "round_index", name="uq_round_completion_session_round"),)
-
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True, nullable=False)
-    round_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    idempotency_key: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    payload: Mapped[str] = mapped_column(Text, nullable=False)
-    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-
-    session: Mapped[Session] = relationship(back_populates="round_completions")
-
+    session: Mapped[Session] = relationship(back_populates="question_answers")

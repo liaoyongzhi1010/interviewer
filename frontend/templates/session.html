@@ -4,226 +4,1039 @@
 
 {% block extra_css %}
 <style>
-    .interview-container {
-        height: calc(100vh - 200px);
+    .session-page {
+        margin-top: 6px;
+        min-height: calc(100vh - 170px);
     }
 
-    .chat-area {
+    .session-page > [class*="col-"] {
+        display: flex;
+    }
+
+    .session-panel {
         width: 100%;
+        height: 100%;
+        min-height: 0;
+        border-radius: 20px;
+        padding: 1.25rem;
+        border: 1px solid rgba(99, 102, 241, 0.18);
+        background: linear-gradient(170deg, rgba(255, 255, 255, 0.95), rgba(244, 247, 255, 0.9));
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+        backdrop-filter: blur(10px);
         display: flex;
         flex-direction: column;
     }
 
-    @media (max-width: 992px) {
-        .interview-container {
-            height: auto;
-        }
-
-        .chat-area {
-            height: calc(100vh - 200px);
-        }
+    .session-panel::-webkit-scrollbar {
+        width: 8px;
     }
 
-    /* 报告按钮样式 */
-    .round-report-actions {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 12px;
-        margin-top: 15px;
+    .session-panel::-webkit-scrollbar-track {
+        background: rgba(148, 163, 184, 0.12);
+        border-radius: 999px;
     }
 
-    .round-report-actions .btn {
-        border-radius: 6px;
-        font-size: 0.85rem;
-        padding: 0.375rem 0.75rem;
+    .session-panel::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.55), rgba(79, 70, 229, 0.52));
+        border-radius: 999px;
     }
 
-    .round-report-actions .btn:hover {
-        transform: translateY(-1px);
-        transition: transform 0.2s ease;
+    .session-panel::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, rgba(37, 99, 235, 0.7), rgba(67, 56, 202, 0.66));
     }
 
-    /* 报告状态指示器 */
-    .report-status {
+    .panel-label {
+        margin: 0;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #4f46e5;
+        font-weight: 700;
+    }
+
+    .panel-title {
+        margin: 0.4rem 0 0;
+        font-size: 1.58rem;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+
+    .panel-subtitle {
+        margin: 0.45rem 0 0;
+        color: #64748b;
+        font-size: 1rem;
+    }
+
+    .panel-block {
+        margin-top: 1rem;
+        padding: 0.9rem;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.86);
+    }
+
+    .panel-meta-title {
+        margin: 0 0 0.55rem;
+        color: #64748b;
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    #sessionStatusBadge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem 0.72rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.74rem;
+        border: 1px solid transparent;
+    }
+
+    #sessionStatusBadge.status-initialized {
+        color: #475569;
+        background: rgba(148, 163, 184, 0.22);
+        border-color: rgba(148, 163, 184, 0.35);
+    }
+
+    #sessionStatusBadge.status-generating {
+        color: #0f766e;
+        background: rgba(20, 184, 166, 0.18);
+        border-color: rgba(20, 184, 166, 0.32);
+    }
+
+    #sessionStatusBadge.status-interviewing {
+        color: #1d4ed8;
+        background: rgba(59, 130, 246, 0.16);
+        border-color: rgba(59, 130, 246, 0.34);
+    }
+
+    #sessionStatusBadge.status-analyzing {
+        color: #b45309;
+        background: rgba(251, 191, 36, 0.2);
+        border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    #sessionStatusBadge.status-completed {
+        color: #047857;
+        background: rgba(16, 185, 129, 0.2);
+        border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .progress-value {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border-radius: 10px;
+        border: 1px solid rgba(79, 70, 229, 0.18);
+        background: rgba(79, 70, 229, 0.08);
+        color: #312e81;
+        font-size: 0.86rem;
+        font-weight: 600;
+        padding: 0.5rem 0.65rem;
+    }
+
+    .panel-meta-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    .panel-meta-list li {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.6rem;
+        font-size: 0.94rem;
+        color: #334155;
+    }
+
+    .panel-meta-list strong {
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .panel-tip {
+        margin-top: 0.8rem;
+        font-size: 0.92rem;
+        color: #64748b;
+        line-height: 1.55;
+    }
+
+    .session-overview-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .session-overview-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+    }
+
+    .session-overview-list li strong {
+        font-size: 0.9rem;
+        color: #64748b;
+        font-weight: 700;
+    }
+
+    .session-overview-value {
+        font-size: 0.95rem;
+        color: #1f2937;
+        font-weight: 600;
+    }
+
+    .session-overview-divider {
+        height: 1px;
+        margin: 0.72rem 0;
+        background: rgba(148, 163, 184, 0.28);
+    }
+
+    .session-overview-row {
+        display: grid;
+        gap: 0.52rem;
+    }
+
+    .session-overview-row strong {
+        font-size: 0.9rem;
+        color: #64748b;
+        font-weight: 700;
+    }
+
+    .strategy-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    .strategy-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        font-size: 0.95rem;
+        color: #334155;
+    }
+
+    .strategy-list li strong {
+        color: #1e293b;
+        font-weight: 700;
+    }
+
+    .strategy-tip {
+        margin-top: 0.65rem;
+        padding-top: 0.65rem;
+        border-top: 1px dashed rgba(148, 163, 184, 0.42);
+        font-size: 0.9rem;
+        color: #475569;
+        line-height: 1.5;
+    }
+
+    .generation-status {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
+        border-radius: 10px;
+        padding: 0.52rem 0.68rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+    }
+
+    .generation-status__icon {
+        width: 16px;
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .generation-status--idle {
+        color: #475569;
+        background: rgba(148, 163, 184, 0.14);
+        border-color: rgba(148, 163, 184, 0.26);
+    }
+
+    .generation-status--generating {
+        color: #312e81;
+        background: rgba(99, 102, 241, 0.12);
+        border-color: rgba(99, 102, 241, 0.28);
+    }
+
+    .generation-status--ready {
+        color: #047857;
+        background: rgba(16, 185, 129, 0.13);
+        border-color: rgba(16, 185, 129, 0.28);
+    }
+
+    .generation-status--failed {
+        color: #b91c1c;
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(239, 68, 68, 0.26);
+    }
+
+    .retry-generate-btn {
+        margin-top: 0.62rem;
+        border-radius: 9px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(255, 255, 255, 0.9);
+        color: #334155;
         font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.35rem 0.58rem;
     }
 
-    .status-indicator {
+    .retry-generate-btn:hover {
+        border-color: rgba(79, 70, 229, 0.32);
+        box-shadow: 0 8px 14px rgba(15, 23, 42, 0.08);
+        background: #fff;
+    }
+
+    .question-nav-status {
+        font-size: 0.92rem;
+        color: #475569;
+        margin-bottom: 0.55rem;
+    }
+
+    .question-nav-preview {
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(248, 250, 252, 0.9);
+        padding: 0.7rem;
+        margin-bottom: 0.65rem;
+        font-size: 0.95rem;
+        color: #1f2937;
+        line-height: 1.55;
+        min-height: 120px;
+    }
+
+    .question-nav-controls {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .question-nav-controls .btn {
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: 0.45rem 0.6rem;
+        border-radius: 9px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: rgba(255, 255, 255, 0.95);
+        color: #334155;
+    }
+
+    .question-nav-controls .btn:hover {
+        border-color: rgba(79, 70, 229, 0.3);
+        box-shadow: 0 7px 14px rgba(15, 23, 42, 0.1);
+    }
+
+    .question-nav-hint {
+        margin-top: 0.5rem;
+        font-size: 0.84rem;
+        color: #64748b;
+        display: block;
+    }
+
+    .panel-block-preview {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel-block-preview .question-nav-preview {
+        flex: 1;
+    }
+
+    .completion-actions-panel {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 0.85rem 0 1.05rem;
+    }
+
+    .completion-actions-buttons {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .completion-actions-buttons .btn {
+        border-radius: 9px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 0.42rem 0.68rem;
+    }
+
+    .completion-actions-buttons--center {
+        justify-content: center;
+        border-radius: 14px;
+        border: 1px solid rgba(59, 130, 246, 0.22);
+        background: linear-gradient(160deg, rgba(239, 246, 255, 0.96), rgba(224, 231, 255, 0.9));
+        padding: 0.75rem 0.85rem;
+        max-width: min(94%, 720px);
+    }
+
+    .completion-actions-meta {
+        margin-top: 0.52rem;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .report-generated-tag {
+        border-radius: 999px;
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.32rem 0.62rem;
+    }
+
+    .report-generate-progress {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.46rem;
+        border-radius: 999px;
+        border: 1px solid rgba(79, 70, 229, 0.28);
+        background: rgba(99, 102, 241, 0.12);
+        color: #312e81;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.32rem 0.62rem;
+    }
+
+    .report-preview {
+        max-height: 68vh;
+        overflow: auto;
+        padding-right: 0.22rem;
+    }
+
+    .report-card {
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: rgba(248, 250, 252, 0.9);
+        padding: 0.85rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .report-card h6 {
+        margin: 0 0 0.5rem;
+        color: #1e293b;
+        font-size: 0.92rem;
+        font-weight: 700;
+    }
+
+    .report-header-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.45rem;
+    }
+
+    .report-pill {
+        border-radius: 10px;
+        border: 1px solid rgba(79, 70, 229, 0.18);
+        background: rgba(224, 231, 255, 0.72);
+        padding: 0.48rem 0.6rem;
+    }
+
+    .report-pill-label {
+        color: #64748b;
+        font-size: 0.74rem;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+    }
+
+    .report-pill-value {
+        color: #0f172a;
+        font-size: 0.92rem;
+        font-weight: 700;
+    }
+
+    .report-item {
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: #fff;
+        padding: 0.62rem 0.7rem;
+        margin-bottom: 0.46rem;
+    }
+
+    .report-item-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .report-item-head span {
+        color: #1e293b;
+        font-size: 0.86rem;
+        font-weight: 700;
+    }
+
+    .report-item-head strong {
+        color: #312e81;
+        font-size: 0.83rem;
+        font-weight: 700;
+    }
+
+    .report-item p {
+        margin: 0;
+        color: #475569;
+        font-size: 0.84rem;
+        line-height: 1.5;
+    }
+
+    .report-empty {
+        border-radius: 10px;
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        color: #64748b;
+        text-align: center;
+        font-size: 0.86rem;
+        padding: 0.72rem;
+    }
+
+    .report-question-title {
+        color: #1e293b;
+        font-size: 0.86rem;
+        font-weight: 700;
+        margin-bottom: 0.24rem;
+    }
+
+    .report-key-value {
+        color: #475569;
+        font-size: 0.84rem;
+        line-height: 1.5;
+    }
+
+    .report-key-value strong {
+        color: #334155;
+        font-weight: 700;
+    }
+
+    .chat-shell {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        border-radius: 20px;
+        border: 1px solid rgba(99, 102, 241, 0.18);
+        overflow: hidden;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(245, 248, 255, 0.92));
+        box-shadow: 0 18px 35px rgba(15, 23, 42, 0.12);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-shell__bottom-accent {
+        display: none;
+    }
+
+    .chat-shell__header {
+        padding: 1rem 1.2rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        background: linear-gradient(120deg, rgba(37, 99, 235, 0.92), rgba(79, 70, 229, 0.92));
+        color: #fff;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    .chat-shell__title {
+        margin: 0;
+        font-size: 1.02rem;
+        font-weight: 700;
+    }
+
+    .chat-shell__subtitle {
+        margin-top: 0.15rem;
+        opacity: 0.9;
+        font-size: 0.82rem;
+    }
+
+    .chat-top-actions {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+    }
+
+    .chat-top-actions .btn {
+        border-radius: 9px;
+        font-size: 0.83rem;
+        font-weight: 600;
+        padding: 0.42rem 0.66rem;
+        border: 1px solid rgba(255, 255, 255, 0.32);
+        background: rgba(255, 255, 255, 0.9);
+        color: #1e293b;
+    }
+
+    .chat-top-actions .btn:hover {
+        background: #fff;
+        border-color: rgba(79, 70, 229, 0.35);
+        box-shadow: 0 8px 14px rgba(15, 23, 42, 0.12);
+    }
+
+    .chat-messages {
+        flex: 1;
+        min-height: 0;
+        overflow-y: scroll;
+        padding: 1.15rem 1.2rem 0.9rem;
+        scroll-behavior: smooth;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+    }
+
+    .chat-messages::-webkit-scrollbar {
         width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
     }
 
-    .status-pending { background-color: #ffc107; }
-    .status-completed { background-color: #28a745; }
-    .status-error { background-color: #dc3545; }
+    .chat-messages::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+    }
 
-    /* 会话状态徽章样式 */
-    #sessionStatusBadge {
-        padding: 0.35rem 0.65rem;
-        font-weight: 500;
-        border-radius: 4px;
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
     }
-    #sessionStatusBadge.status-initialized {
-        background-color: #6c757d;
-        color: white;
+
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.3);
     }
-    #sessionStatusBadge.status-generating {
-        background-color: #17a2b8;
-        color: white;
+
+    .message {
+        margin-bottom: 0.95rem;
     }
-    #sessionStatusBadge.status-interviewing {
-        background-color: #007bff;
-        color: white;
+
+    .message-content {
+        max-width: min(82%, 760px);
+        border-radius: 15px;
+        line-height: 1.62;
+        font-size: 0.95rem;
     }
-    #sessionStatusBadge.status-analyzing {
-        background-color: #ffc107;
-        color: #212529;
+
+    .message.ai .message-content {
+        border-bottom-left-radius: 5px;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        box-shadow: 0 7px 15px rgba(15, 23, 42, 0.06);
     }
-    #sessionStatusBadge.status-round_completed {
-        background-color: #28a745;
-        color: white;
+
+    .message.user .message-content {
+        border-bottom-right-radius: 5px;
+        background: linear-gradient(135deg, #2563eb 0%, #4f46e5 95%);
+        box-shadow: 0 9px 20px rgba(79, 70, 229, 0.25);
+    }
+
+    .message-time {
+        margin-top: 0.5rem;
+        font-size: 0.72rem;
+        opacity: 0.72;
+    }
+
+    .question-message-actions {
+        margin-top: 0.62rem;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .question-favorite-btn {
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(255, 255, 255, 0.96);
+        color: #334155;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.3rem 0.52rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .question-favorite-btn:hover {
+        border-color: rgba(79, 70, 229, 0.35);
+        color: #312e81;
+    }
+
+    .question-favorite-btn.is-favorited {
+        border-color: rgba(245, 158, 11, 0.45);
+        background: rgba(254, 243, 199, 0.92);
+        color: #b45309;
+    }
+
+    .typing-indicator {
+        margin-bottom: 0.9rem;
+        color: #475569;
+        padding-left: 0.1rem;
+    }
+
+    .typing-indicator .typing-dots span {
+        background-color: #4f46e5;
+    }
+
+    .chat-input {
+        position: relative;
+        padding: 0.9rem 1.15rem 0;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        border-bottom: none;
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    .chat-input-bottom-accent {
+        height: 20px;
+        margin-top: 0.6rem;
+        margin-left: -1.15rem;
+        margin-right: -1.15rem;
+        margin-bottom: 0;
+        background: linear-gradient(120deg, rgba(37, 99, 235, 0.92), rgba(79, 70, 229, 0.92));
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        border-bottom-left-radius: 20px;
+        border-bottom-right-radius: 20px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        pointer-events: none;
+    }
+
+    .chat-input .input-group {
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        border-radius: 14px;
+        padding: 0.34rem;
+        align-items: center;
+    }
+
+    .chat-input .form-control {
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        padding: 0.65rem 0.85rem;
+        color: #111827;
+    }
+
+    .chat-input .form-control:focus {
+        box-shadow: none;
+        border: none;
+    }
+
+    .chat-input .btn-primary {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        padding: 0;
+        flex-shrink: 0;
+    }
+
+    .input-hint {
+        margin-top: 0.5rem;
+        text-align: center;
+        font-size: 0.78rem;
+        color: #6b7280;
+    }
+
+    @media (max-width: 991px) {
+        .session-page {
+            height: auto;
+            min-height: auto;
+            overflow: visible;
+        }
+
+        .session-page > [class*="col-"] {
+            display: block;
+        }
+
+        .session-panel,
+        .chat-shell {
+            height: auto;
+        }
+
+        .chat-messages {
+            min-height: calc(100vh - 430px);
+        }
+    }
+
+    @media (min-width: 992px) {
+        body {
+            overflow: hidden;
+        }
+
+        main.container-fluid {
+            box-sizing: border-box;
+            height: calc(100vh - 70px);
+            height: calc(100dvh - 70px);
+            overflow: hidden;
+            margin-top: 0 !important;
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        .session-page {
+            height: 100%;
+            min-height: 0;
+            margin-top: 0;
+            overflow: hidden;
+        }
+
+        .session-page > [class*="col-"] {
+            height: 100%;
+            min-height: 0;
+        }
+
+        .session-panel,
+        .chat-shell {
+            height: 100%;
+            min-height: 0;
+        }
+
+        .session-panel {
+            overflow-x: hidden;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(79, 70, 229, 0.52) rgba(148, 163, 184, 0.12);
+        }
+
+        .chat-shell {
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            min-height: 0;
+            overflow-y: scroll;
+        }
+
+        footer {
+            display: none;
+        }
+    }
+
+    @media (max-width: 991px) {
+        .session-page {
+            margin-top: 0;
+            min-height: auto;
+        }
+
+        .session-panel {
+            border-radius: 16px;
+            padding: 1rem;
+        }
+
+        .panel-title {
+            font-size: 1.28rem;
+        }
+
+        .chat-shell {
+            border-radius: 16px;
+        }
+
+        .chat-shell__header {
+            padding: 0.9rem 1rem;
+        }
+
+        .chat-top-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .chat-messages {
+            min-height: calc(100vh - 470px);
+            padding: 0.95rem 0.9rem 0.8rem;
+        }
+
+        .message-content {
+            max-width: 90%;
+            padding: 0.92rem 1rem;
+        }
+
+        .chat-input {
+            padding: 0.82rem 0.85rem 0;
+        }
+
+        .chat-input-bottom-accent {
+            margin-top: 0.62rem;
+            margin-left: -0.85rem;
+            margin-right: -0.85rem;
+            height: 18px;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <!-- 面包屑导航 -->
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="{{ url_for('room.index') }}">
-                        <i class="fas fa-home me-1"></i>首页
-                    </a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="{{ url_for('room.room_detail', room_id=session.room_id) }}">
-                        <i class="fas fa-door-open me-1"></i>面试间
-                    </a>
-                </li>
-                <li class="breadcrumb-item active">
-                    <i class="fas fa-comments me-1"></i>{{ session.name }}
-                </li>
-            </ol>
-        </nav>
-        
-        <!-- 主要面试界面 -->
-        <div class="interview-container">
-            <!-- ChatGPT风格对话界面 -->
-            <div class="chat-area">
-                <div class="chat-container">
-                    <!-- 聊天头部 -->
-                    <div class="chat-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-0">{{ session.name }}</h6>
-                                <small class="opacity-75">AI智能面试官</small>
-                                <div class="mt-1">
-                                    <span class="badge" id="sessionStatusBadge" style="font-size: 0.75rem;">
-                                        {{ session.status_display }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-light" onclick="generateQuestions()">
-                                    <i class="fas fa-plus me-1"></i>生成面试题
-                                </button>
-                                <!-- 报告按钮区域 -->
-                                <div id="reportButtonsContainer"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 消息区域 -->
-                    <div class="chat-messages" id="chatMessages">
-                        <!-- 欢迎消息 -->
-                        <div class="message ai">
-                            <div class="message-avatar">
-                                <i class="fas fa-robot"></i>
-                            </div>
-                            <div class="message-content">
-                                <div>您好！我是您的AI面试官。我已经查看了您的简历，准备开始面试。</div>
-                                <div class="message-time">{{ session.created_at[:19]|replace('T', ' ') }}</div>
-                            </div>
-                        </div>
-                        
-                        <!-- 动态加载的对话轮次 -->
-                        {% for round in rounds %}
-                        <div class="round-header" data-round-id="{{ round.id }}">
-                            <span>第{{ round.round_index + 1 }}轮面试题</span>
-                        </div>
+<div class="row session-page g-3">
+    <div class="col-12 col-lg-4">
+        <aside class="session-panel">
+            <p class="panel-label">Interview Session</p>
+            <h1 class="panel-title">{{ session.name }}</h1>
+            <p class="panel-subtitle">一次会话就是一次完整面试记录，回答完成后可直接生成报告。</p>
 
-                        <!-- AI生成的问题 -->
-                        <div class="message ai">
-                            <div class="message-avatar">
-                                <i class="fas fa-robot"></i>
-                            </div>
-                            <div class="message-content">
-                                {% if round.status == 'completed' %}
-                                    <!-- 已完成的轮次：显示所有问题 -->
-                                    <div>我为您准备了以下{{ round.questions|length }}道面试题：</div>
-                                    <div class="questions-container mt-3">
-                                        {% for question in round.questions %}
-                                        <div class="question-card mb-2">
-                                            <div class="question-text">
-                                                <span class="question-number">{{ loop.index }}.</span>
-                                                {{ question }}
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <!-- 进行中的轮次：不显示问题列表 -->
-                                    <div>我为您准备了{{ round.questions|length }}道面试题。让我们逐一进行，请仔细回答每一道题目。</div>
-                                {% endif %}
-                                <div class="message-time">{{ round.created_at[:19]|replace('T', ' ') }}</div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                        
-                        <!-- 加载指示器 -->
-                        <div class="typing-indicator" id="typingIndicator" style="display: none;">
-                            <div class="message-avatar">
-                                <i class="fas fa-robot"></i>
-                            </div>
-                            <div>
-                                AI正在生成面试题
-                                <div class="typing-dots">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                </div>
-                            </div>
-                        </div>
+            <div class="panel-block">
+                <p class="panel-meta-title">会话概览</p>
+                <ul class="session-overview-list">
+                    <li>
+                        <strong>会话状态</strong>
+                        <span class="badge" id="sessionStatusBadge">{{ session.status_display }}</span>
+                    </li>
+                    <li>
+                        <strong>问答进度</strong>
+                        <span class="session-overview-value" id="qaProgressText">
+                            已回答 {{ session.answered_count }}/{{ session.questions_count }}
+                        </span>
+                    </li>
+                </ul>
+                <div class="session-overview-divider"></div>
+                <div class="session-overview-row">
+                    <strong>出题状态</strong>
+                    <div id="questionGenerationStatus" class="generation-status generation-status--idle">
+                        <span class="generation-status__icon" id="questionGenerationIcon">
+                            <i class="fas fa-hourglass-half"></i>
+                        </span>
+                        <span id="questionGenerationText">等待自动出题...</span>
                     </div>
-                    
-                    <!-- 输入区域 -->
-                    <div class="chat-input">
-                        <div class="input-group">
-                            <input type="text" 
-                                   class="form-control" 
-                                   placeholder="您可以回答面试题或请求生成新的题目..." 
-                                   id="messageInput"
-                                   onkeypress="handleKeyPress(event)">
-                            <button class="btn btn-primary" onclick="sendMessage()">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                        
-                        <div class="mt-2 text-center">
-                            <small class="text-muted">
-                                按回车发送消息 | 
-                                <a href="javascript:generateQuestions()" class="text-decoration-none">点击生成新的面试题</a>
-                            </small>
+                    <button type="button" class="btn retry-generate-btn d-none" id="retryGenerateBtn">
+                        <i class="fas fa-rotate-right me-1"></i>重试出题
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-block">
+                <p class="panel-meta-title">出题策略</p>
+                <ul class="strategy-list">
+                    {% for item in interview_strategy.main_plan %}
+                    <li>
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.count }} 题</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div class="strategy-tip">
+                    追问规则：每道主问题最多 {{ interview_strategy.follow_up_per_main }} 次，整场最多 {{ interview_strategy.follow_up_total_cap }} 次（总题上限 9 题）。
+                </div>
+            </div>
+
+            <div class="panel-block">
+                <p class="panel-meta-title">会话信息</p>
+                <ul class="panel-meta-list">
+                    <li>
+                        <strong>创建时间</strong>
+                        <span>{{ session.created_at[:19]|replace('T', ' ') if session.created_at else '-' }}</span>
+                    </li>
+                    <li>
+                        <strong>模式</strong>
+                        <span>单次完整面试</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="panel-block panel-block-preview">
+                <p class="panel-meta-title">题目预览</p>
+                <div class="question-nav-status" id="questionPreviewMeta">暂无题目</div>
+                <div class="question-nav-preview" id="questionPreviewText">生成题目后，这里会显示上一题/下一题的内容预览。</div>
+                <div class="question-nav-controls">
+                    <button type="button" class="btn" id="prevQuestionBtn">
+                        <i class="fas fa-arrow-left me-1"></i>上一题
+                    </button>
+                    <button type="button" class="btn" id="nextQuestionBtn">
+                        下一题<i class="fas fa-arrow-right ms-1"></i>
+                    </button>
+                </div>
+                <small class="question-nav-hint">仅预览题目，不会改变当前作答进度。</small>
+            </div>
+
+            <p class="panel-tip">
+                可先看左侧题目预览，再在右侧组织回答。
+            </p>
+        </aside>
+    </div>
+
+    <div class="col-12 col-lg-8">
+        <section class="chat-shell">
+            <div class="chat-shell__header">
+                <div>
+                    <h2 class="chat-shell__title">AI 面试对话</h2>
+                    <div class="chat-shell__subtitle">系统会根据简历与岗位信息逐题提问，请尽量完整回答。</div>
+                </div>
+                <div class="chat-top-actions">
+                    <a href="/room/{{ session.room_id }}" class="btn btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>返回面试间
+                    </a>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div>您好！我是您的 AI 面试官。系统会自动生成题目并按顺序开始面试。</div>
+                        <div class="message-time">{{ session.created_at[:19]|replace('T', ' ') if session.created_at else '' }}</div>
+                    </div>
+                </div>
+
+                <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        AI 正在准备下一步内容
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="chat-input">
+                <div class="input-group">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="请输入你的回答..."
+                           id="messageInput"
+                           onkeypress="handleKeyPress(event)">
+                    <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="input-hint">按 Enter 发送回答</div>
+                <div class="chat-input-bottom-accent" aria-hidden="true"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-chart-line me-2"></i>面试报告</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="reportPreview" class="report-preview"></div>
             </div>
         </div>
     </div>
@@ -233,881 +1046,958 @@
 
 {% block extra_js %}
 <script>
-// 由后端注入：数字人启动提示与链接（将异步加载）
-let DH_BOOT_MESSAGE = {{ dh_message|tojson if dh_message else 'null' }};
-let DH_CONNECT_URL = {{ dh_connect_url|tojson if dh_connect_url else 'null' }};
-
-// 全局会话ID、房间ID和当前轮次状态
 const SESSION_ID = '{{ session.id }}';
 const ROOM_ID = '{{ session.room_id }}';
-let currentRoundId = null;
-let currentQuestionData = null;
-let roundsLoaded = false; // 标记轮次是否已加载
+const MAIN_STRATEGY_TEXT = '{% for item in interview_strategy.main_plan %}{{ item.label }}{{ item.count }}{% if not loop.last %} + {% endif %}{% endfor %}';
+let hasQuestions = {{ 'true' if session.questions_count > 0 else 'false' }};
 
-// 更新会话状态显示
-function updateSessionStatus(status, statusDisplay) {
-    console.log('🔄 Updating session status:', { status, statusDisplay });
-    const statusBadge = document.getElementById('sessionStatusBadge');
-    if (!statusBadge) {
-        console.warn('❌ Status badge element not found');
+let currentQuestionData = null;
+let lastRenderedQaId = null;
+let qaQuestionList = [];
+let questionPreviewIndex = -1;
+let isGeneratingQuestions = false;
+let isSessionCompleted = false;
+let reportAvailable = false;
+let evaluationAvailable = false;
+let pdfAvailable = false;
+let reportModal = null;
+let isSubmittingAnswer = false;
+let isGeneratingReport = false;
+let reportGenerationProgressTimer = null;
+
+function showToast(type, message) {
+    if (window.YeyingInterviewer && window.YeyingInterviewer.showToast) {
+        window.YeyingInterviewer.showToast(type, message);
         return;
     }
-
-    // 移除所有状态class
-    statusBadge.classList.remove('status-initialized', 'status-generating', 'status-interviewing', 'status-analyzing', 'status-round_completed');
-
-    // 添加新的状态class
-    statusBadge.classList.add('status-' + status);
-
-    // 更新显示文本
-    statusBadge.textContent = statusDisplay;
-    console.log('✅ Status badge updated:', statusBadge.className, statusBadge.textContent);
+    console.log(`[${type}] ${message}`);
 }
 
-// 从服务器获取最新的会话状态
-async function refreshSessionStatus() {
-    try {
-        console.log('🔍 Fetching session status from server...');
-        const response = await fetch(`/api/v1/session/${SESSION_ID}/status`);
-        if (response.ok) {
-            const data = await response.json();
-            console.log('📥 Received status data:', data);
-            if (data.success && data.data) {
-                updateSessionStatus(data.data.status, data.data.status_display);
-            } else {
-                console.warn('❌ Invalid status response:', data);
-            }
-        } else {
-            console.warn('❌ Status request failed:', response.status);
-        }
-    } catch (error) {
-        console.warn('❌ Failed to refresh session status:', error);
+function formatMessageContent(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML.replace(/\n/g, '<br>');
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatReportTime(value) {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
     }
+    return date.toLocaleString('zh-CN');
 }
 
-// 获取当前轮次数量
-async function getCurrentRoundCount() {
-    try {
-        const response = await fetch(`/api/v1/session/${SESSION_ID}/status`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.data) {
-                return data.data.current_round || 0;
-            }
-        }
-    } catch (error) {
-        console.warn('Failed to get current round count:', error);
+function renderReportView(reportData) {
+    if (!reportData || typeof reportData !== 'object') {
+        return '<div class="report-empty">暂无报告数据</div>';
     }
-    return 0;
-}
 
-// 异步加载数字人
-async function loadDigitalHuman() {
-    try {
-        const response = await fetch(`/api/v1/session/${SESSION_ID}/boot_dh`, {
-            method: 'POST'
-        });
-        const result = await response.json();
+    const header = reportData.report_header || {};
+    const comment = reportData.interviewer_comment || {};
+    const analysis = reportData.comprehensive_analysis || {};
+    const keyPoints = reportData.key_points_analysis || {};
+    const questionAnalysis = Array.isArray(reportData.question_analysis) ? reportData.question_analysis : [];
 
-        if (result.success && result.data) {
-            DH_BOOT_MESSAGE = result.data.message;
-            DH_CONNECT_URL = result.data.connect_url;
+    const scoreRows = [
+        ['内容完整度', 'content_completeness'],
+        ['亮点突出度', 'highlight_prominence'],
+        ['逻辑清晰度', 'logical_clarity'],
+        ['表达能力', 'expression_ability'],
+        ['岗位契合度', 'position_matching'],
+    ].map(([label, key]) => {
+        const item = analysis[key] || {};
+        const scoreText = item.score === undefined || item.score === null ? '-' : `${escapeHtml(item.score)} 分`;
+        return `
+            <div class="report-item">
+                <div class="report-item-head">
+                    <span>${escapeHtml(label)}</span>
+                    <strong>${scoreText}</strong>
+                </div>
+                <p>${escapeHtml(item.comment || '暂无评语')}</p>
+            </div>
+        `;
+    }).join('');
 
-            if (DH_BOOT_MESSAGE) {
-                addMessage('ai', DH_BOOT_MESSAGE);
-            }
-        }
-    } catch (error) {
-        console.warn('加载数字人失败:', error);
-    }
-}
+    const keyRows = [
+        ['项目深度', 'project_depth'],
+        ['潜力特质', 'personality_potential'],
+        ['专业知识', 'professional_knowledge'],
+        ['软技能', 'soft_skills'],
+    ].map(([label, key]) => {
+        const item = keyPoints[key] || {};
+        const level = item.level ? `（${escapeHtml(item.level)}）` : '';
+        return `
+            <div class="report-item">
+                <div class="report-item-head">
+                    <span>${escapeHtml(label)}${level}</span>
+                </div>
+                <p>${escapeHtml(item.description || '暂无分析')}</p>
+            </div>
+        `;
+    }).join('');
 
-// 异步加载轮次数据
-async function loadSessionRounds() {
-    if (roundsLoaded) return; // 避免重复加载
+    const questionRows = questionAnalysis.length
+        ? questionAnalysis.map((item, index) => `
+            <div class="report-item">
+                <div class="report-question-title">${index + 1}. ${escapeHtml(item.question || '未命名题目')}</div>
+                <div class="report-key-value"><strong>本题考点：</strong>${escapeHtml(item.key_points || '暂无')}</div>
+                <div class="report-key-value"><strong>改进建议：</strong>${escapeHtml(item.improvement_suggestions || '暂无')}</div>
+            </div>
+        `).join('')
+        : '<div class="report-empty">暂无逐题分析</div>';
 
-    try {
-        const response = await fetch(`/api/v1/session/${SESSION_ID}/rounds`);
-        const result = await response.json();
-
-        if (result.success && result.data && result.data.length > 0) {
-            roundsLoaded = true;
-
-            // 渲染轮次到页面
-            const chatMessages = document.getElementById('chatMessages');
-            result.data.forEach(round => {
-                insertRoundHeader(round);
-            });
-
-            // 检查进行中的轮次
-            await checkActiveRound();
-        }
-    } catch (error) {
-        console.warn('加载轮次数据失败:', error);
-    }
-}
-
-// 插入轮次header到页面
-function insertRoundHeader(round) {
-    const chatMessages = document.getElementById('chatMessages');
-    const roundHeader = document.createElement('div');
-    roundHeader.className = 'round-header';
-    roundHeader.dataset.roundId = round.id;
-    roundHeader.dataset.roundIndex = round.round_index;
-    roundHeader.innerHTML = `
-        <div class="round-info">
-            <i class="fas fa-layer-group me-2"></i>
-            <strong>第 ${round.round_index + 1} 轮面试</strong>
-            <span class="badge bg-primary ms-2">${round.questions_count} 个问题</span>
+    const generatedTime = header.generated_time || reportData.generated_at;
+    return `
+        <div class="report-card">
+            <h6>报告概览</h6>
+            <div class="report-header-grid">
+                <div class="report-pill">
+                    <div class="report-pill-label">总评等级</div>
+                    <div class="report-pill-value">${escapeHtml(header.overall_grade || '-')}</div>
+                </div>
+                <div class="report-pill">
+                    <div class="report-pill-label">综合得分</div>
+                    <div class="report-pill-value">${escapeHtml(header.total_score ?? '-')}</div>
+                </div>
+                <div class="report-pill">
+                    <div class="report-pill-label">生成时间</div>
+                    <div class="report-pill-value">${escapeHtml(formatReportTime(generatedTime))}</div>
+                </div>
+            </div>
+        </div>
+        <div class="report-card">
+            <h6>面试官点评</h6>
+            <div class="report-key-value"><strong>总结：</strong>${escapeHtml(comment.summary || '暂无')}</div>
+            <div class="report-key-value"><strong>建议：</strong>${escapeHtml(comment.suggestions || '暂无')}</div>
+        </div>
+        <div class="report-card">
+            <h6>综合分析（5维度）</h6>
+            ${scoreRows}
+        </div>
+        <div class="report-card">
+            <h6>关键项分析</h6>
+            ${keyRows}
+        </div>
+        <div class="report-card">
+            <h6>逐题分析</h6>
+            ${questionRows}
         </div>
     `;
-    chatMessages.appendChild(roundHeader);
-
-    // 只有轮次完成时才渲染所有问题
-    // 如果轮次正在进行中(active)，由 checkActiveRound() 来处理当前问题
-    if (round.status === 'completed' && round.questions && round.questions.length > 0) {
-        console.log(`📋 渲染已完成轮次 ${round.round_index + 1} 的所有问题`);
-        round.questions.forEach((qa, index) => {
-            // 添加问题消息
-            addMessage('ai', qa.question, false);
-
-            // 如果有回答，添加回答消息
-            if (qa.answer) {
-                addMessage('user', qa.answer, false);
-            }
-        });
-    } else if (round.status === 'active') {
-        console.log(`⏳ 轮次 ${round.round_index + 1} 正在进行中，不渲染所有问题`);
-    }
 }
 
-// 页面加载完成后初始化
-$(document).ready(async function() {
-    scrollToBottom();
-    console.log('面试会话页面已加载');
-
-    // 异步加载数字人（不阻塞页面）
-    loadDigitalHuman();
-
-    // 异步加载轮次数据（不阻塞页面）
-    await loadSessionRounds();
-
-    // 检查已有报告状态
-    await checkExistingReports();
-
-    // === 正式修复：页面加载完成后，自动识别最后一轮并显示【生成报告】按钮 ===
-    const headers = document.querySelectorAll('.round-header');
-    if (headers.length) {
-        currentRoundId = headers[headers.length - 1].dataset.roundId;
-        showReportButtons();
-    }
-});
-
-// 检查是否有进行中的轮次
-async function checkActiveRound() {
-    // 查找页面中的最后一个轮次
-    const rounds = document.querySelectorAll('.round-header');
-    if (rounds.length > 0) {
-        // 从最后一个轮次header提取round_id
-        const lastRound = rounds[rounds.length - 1];
-        const roundData = lastRound.dataset.roundId;
-        if (roundData) {
-            currentRoundId = roundData;
-            // 尝试加载当前问题
-            await loadCurrentQuestion();
-        }
-    }
-}
-
-// 滚动到消息底部
 function scrollToBottom() {
     const chatMessages = document.getElementById('chatMessages');
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// 处理键盘按键
+function addMessage(type, content) {
+    const chatMessages = document.getElementById('chatMessages');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const messageTime = new Date().toLocaleString('zh-CN');
+    const icon = type === 'user' ? 'user' : 'robot';
+
+    const messageHTML = `
+        <div class="message ${type}">
+            <div class="message-avatar">
+                <i class="fas fa-${icon}"></i>
+            </div>
+            <div class="message-content">
+                <div>${formatMessageContent(content)}</div>
+                <div class="message-time">${messageTime}</div>
+            </div>
+        </div>
+    `;
+
+    if (typingIndicator) {
+        typingIndicator.insertAdjacentHTML('beforebegin', messageHTML);
+    } else {
+        chatMessages.insertAdjacentHTML('beforeend', messageHTML);
+    }
+
+    scrollToBottom();
+}
+
+function setFavoriteButtonState(button, isFavorited) {
+    if (!button) return;
+    button.classList.toggle('is-favorited', !!isFavorited);
+    button.dataset.favorited = isFavorited ? '1' : '0';
+    button.innerHTML = isFavorited
+        ? '<i class="fas fa-bookmark"></i><span>已收藏</span>'
+        : '<i class="far fa-bookmark"></i><span>收藏题目</span>';
+}
+
+async function syncFavoriteStateForButton(button) {
+    if (!button) return;
+    const qaId = button.dataset.qaId;
+    if (!qaId) return;
+
+    try {
+        const response = await fetch(`/api/v1/mistakes/favorite/${qaId}`);
+        const data = await response.json();
+        if (!response.ok || !data.success) return;
+        setFavoriteButtonState(button, !!data.data?.is_favorited);
+    } catch (error) {
+        console.warn('同步收藏状态失败:', error);
+    }
+}
+
+function addQuestionMessage(questionData, content) {
+    const chatMessages = document.getElementById('chatMessages');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const messageTime = new Date().toLocaleString('zh-CN');
+
+    const qaId = questionData?.qa_id || '';
+    const favoriteActionHtml = qaId
+        ? `
+            <div class="question-message-actions">
+                <button type="button" class="question-favorite-btn" data-qa-id="${qaId}" data-favorited="0">
+                    <i class="far fa-bookmark"></i><span>收藏题目</span>
+                </button>
+            </div>
+        `
+        : '';
+
+    const messageHTML = `
+        <div class="message ai">
+            <div class="message-avatar">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="message-content">
+                <div>${formatMessageContent(content)}</div>
+                ${favoriteActionHtml}
+                <div class="message-time">${messageTime}</div>
+            </div>
+        </div>
+    `;
+
+    if (typingIndicator) {
+        typingIndicator.insertAdjacentHTML('beforebegin', messageHTML);
+    } else {
+        chatMessages.insertAdjacentHTML('beforeend', messageHTML);
+    }
+
+    if (qaId) {
+        const buttons = chatMessages.querySelectorAll(`.question-favorite-btn[data-qa-id="${qaId}"]`);
+        const latestButton = buttons[buttons.length - 1];
+        if (latestButton) {
+            syncFavoriteStateForButton(latestButton);
+        }
+    }
+
+    scrollToBottom();
+}
+
+async function toggleQuestionFavorite(button) {
+    if (!button || button.dataset.loading === '1') {
+        return;
+    }
+
+    const qaId = button.dataset.qaId;
+    if (!qaId) {
+        return;
+    }
+
+    const currentlyFavorited = button.dataset.favorited === '1';
+    button.dataset.loading = '1';
+    button.disabled = true;
+
+    try {
+        const method = currentlyFavorited ? 'DELETE' : 'POST';
+        const response = await fetch(`/api/v1/mistakes/favorite/${qaId}`, { method });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            showToast('error', data.message || '操作失败，请重试');
+            return;
+        }
+
+        const nextFavorited = !currentlyFavorited;
+        const allButtons = document.querySelectorAll(`.question-favorite-btn[data-qa-id="${qaId}"]`);
+        allButtons.forEach((btn) => setFavoriteButtonState(btn, nextFavorited));
+        showToast('success', nextFavorited ? '已收藏到错题集' : '已取消收藏');
+    } catch (error) {
+        showToast('error', '操作失败，请重试');
+    } finally {
+        button.dataset.loading = '0';
+        button.disabled = false;
+    }
+}
+
+function startReportGenerationProgress() {
+    const progressEl = document.getElementById('reportGeneratingProgress');
+    const textEl = document.getElementById('reportGeneratingText');
+    if (!progressEl || !textEl) return;
+
+    const stages = [
+        '正在分析回答内容...',
+        '正在生成评估结果...',
+        '正在生成 PDF 报告...',
+    ];
+
+    let stageIndex = 0;
+    textEl.textContent = stages[stageIndex];
+    progressEl.classList.remove('d-none');
+    scrollToBottom();
+
+    if (reportGenerationProgressTimer) {
+        window.clearInterval(reportGenerationProgressTimer);
+    }
+    reportGenerationProgressTimer = window.setInterval(() => {
+        stageIndex = Math.min(stageIndex + 1, stages.length - 1);
+        textEl.textContent = stages[stageIndex];
+    }, 2300);
+}
+
+function stopReportGenerationProgress() {
+    if (reportGenerationProgressTimer) {
+        window.clearInterval(reportGenerationProgressTimer);
+        reportGenerationProgressTimer = null;
+    }
+    const progressEl = document.getElementById('reportGeneratingProgress');
+    if (progressEl) {
+        progressEl.classList.add('d-none');
+    }
+}
+
+function renderCompletionActions() {
+    const chatMessages = document.getElementById('chatMessages');
+    const typingIndicator = document.getElementById('typingIndicator');
+    if (!chatMessages) return;
+
+    let actionsPanel = document.getElementById('completionActionsPanel');
+
+    if (!actionsPanel) {
+        const html = `
+            <div id="completionActionsPanel" class="completion-actions-panel">
+                <div class="completion-actions-buttons completion-actions-buttons--center flex-column">
+                    <div class="completion-actions-buttons">
+                        <a href="/create_session/${ROOM_ID}" class="btn btn-primary" id="continueInterviewBtn">
+                            <i class="fas fa-plus me-1"></i>继续面试
+                        </a>
+                        <button type="button" class="btn btn-primary ${reportAvailable ? 'd-none' : ''}" id="generateReportBtn">
+                            <i class="fas fa-magic me-1"></i>生成报告
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary ${evaluationAvailable ? '' : 'd-none'}" id="viewReportBtn">
+                            <i class="fas fa-eye me-1"></i>查看报告
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary ${pdfAvailable ? '' : 'd-none'}" id="downloadReportBtn">
+                            <i class="fas fa-download me-1"></i>下载PDF
+                        </button>
+                    </div>
+                    <div class="completion-actions-meta">
+                        <span class="report-generated-tag ${reportAvailable ? '' : 'd-none'}" id="reportGeneratedTag">
+                            <i class="fas fa-circle-check me-1"></i>报告已生成
+                        </span>
+                        <span class="report-generate-progress d-none" id="reportGeneratingProgress">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span id="reportGeneratingText">正在分析回答内容...</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (typingIndicator) {
+            typingIndicator.insertAdjacentHTML('beforebegin', html);
+        } else {
+            chatMessages.insertAdjacentHTML('beforeend', html);
+        }
+        actionsPanel = document.getElementById('completionActionsPanel');
+    }
+
+    if (typingIndicator && actionsPanel && actionsPanel.nextElementSibling !== typingIndicator) {
+        chatMessages.insertBefore(actionsPanel, typingIndicator);
+    }
+
+    const generateBtn = actionsPanel.querySelector('#generateReportBtn');
+    const viewBtn = actionsPanel.querySelector('#viewReportBtn');
+    const downloadBtn = actionsPanel.querySelector('#downloadReportBtn');
+    const generatedTag = actionsPanel.querySelector('#reportGeneratedTag');
+
+    if (generateBtn) {
+        generateBtn.classList.toggle('d-none', reportAvailable);
+        generateBtn.disabled = isGeneratingReport;
+        generateBtn.innerHTML = isGeneratingReport
+            ? '<i class="fas fa-spinner fa-spin me-1"></i>生成中...'
+            : '<i class="fas fa-magic me-1"></i>生成报告';
+    }
+    if (viewBtn) {
+        viewBtn.classList.toggle('d-none', !evaluationAvailable);
+    }
+    if (downloadBtn) {
+        downloadBtn.classList.toggle('d-none', !pdfAvailable);
+    }
+    if (generatedTag) {
+        generatedTag.classList.toggle('d-none', !reportAvailable);
+    }
+    if (!isGeneratingReport) {
+        stopReportGenerationProgress();
+    }
+
+    if (generateBtn && !generateBtn.dataset.bound) {
+        generateBtn.addEventListener('click', generateReport);
+        generateBtn.dataset.bound = '1';
+    }
+    if (viewBtn && !viewBtn.dataset.bound) {
+        viewBtn.addEventListener('click', viewReport);
+        viewBtn.dataset.bound = '1';
+    }
+    if (downloadBtn && !downloadBtn.dataset.bound) {
+        downloadBtn.addEventListener('click', downloadReport);
+        downloadBtn.dataset.bound = '1';
+    }
+
+    scrollToBottom();
+}
+
+function removeCompletionActions() {
+    stopReportGenerationProgress();
+    const actionsPanel = document.getElementById('completionActionsPanel');
+    if (actionsPanel) {
+        actionsPanel.remove();
+    }
+}
+
+function setInputEnabled(enabled) {
+    const input = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    input.disabled = !enabled;
+    sendBtn.disabled = !enabled;
+}
+
+function getQuestionLabel(questionType, category) {
+    if (questionType === 'follow_up') return '追问';
+    const normalized = (category || '').toString().trim();
+    return normalized || '项目题';
+}
+
+function updateSessionStatus(status, statusDisplay) {
+    const statusBadge = document.getElementById('sessionStatusBadge');
+    if (!statusBadge) return;
+
+    statusBadge.classList.remove('status-initialized', 'status-generating', 'status-interviewing', 'status-analyzing', 'status-completed');
+    statusBadge.classList.add('status-' + status);
+    statusBadge.textContent = statusDisplay;
+
+    isSessionCompleted = status === 'completed';
+    if (status === 'completed') {
+        setInputEnabled(false);
+    }
+}
+
+function updateProgressText(answered, total) {
+    const progress = document.getElementById('qaProgressText');
+    if (progress) {
+        progress.textContent = `已回答 ${answered}/${total}`;
+    }
+}
+
+function setQuestionGenerationState(state, message = '', showRetry = false) {
+    const status = document.getElementById('questionGenerationStatus');
+    const icon = document.getElementById('questionGenerationIcon');
+    const text = document.getElementById('questionGenerationText');
+    const retryBtn = document.getElementById('retryGenerateBtn');
+    if (!status || !icon || !text || !retryBtn) return;
+
+    const stateMap = {
+        idle: {
+            icon: '<i class="fas fa-hourglass-half"></i>',
+            text: '等待自动出题...',
+        },
+        generating: {
+            icon: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>',
+            text: `正在按策略自动出题（${MAIN_STRATEGY_TEXT}）`,
+        },
+        ready: {
+            icon: '<i class="fas fa-circle-check"></i>',
+            text: '题目已就绪，开始面试。',
+        },
+        failed: {
+            icon: '<i class="fas fa-circle-exclamation"></i>',
+            text: '自动出题失败，请点击重试。',
+        },
+    };
+
+    const normalizedState = Object.prototype.hasOwnProperty.call(stateMap, state) ? state : 'idle';
+    status.classList.remove('generation-status--idle', 'generation-status--generating', 'generation-status--ready', 'generation-status--failed');
+    status.classList.add(`generation-status--${normalizedState}`);
+    icon.innerHTML = stateMap[normalizedState].icon;
+    text.textContent = message || stateMap[normalizedState].text;
+    retryBtn.classList.toggle('d-none', !showRetry);
+    retryBtn.disabled = normalizedState === 'generating';
+}
+
+function normalizeQaList(list) {
+    return Array.isArray(list)
+        ? [...list].sort((a, b) => (a.question_index || 0) - (b.question_index || 0))
+        : [];
+}
+
+function setQuestionPreview(index) {
+    const metaEl = document.getElementById('questionPreviewMeta');
+    const textEl = document.getElementById('questionPreviewText');
+    const prevBtn = document.getElementById('prevQuestionBtn');
+    const nextBtn = document.getElementById('nextQuestionBtn');
+
+    if (!qaQuestionList.length || index < 0) {
+        questionPreviewIndex = -1;
+        if (metaEl) metaEl.textContent = '暂无题目';
+        if (textEl) textEl.textContent = '生成题目后，这里会显示上一题/下一题的内容预览。';
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
+        return;
+    }
+
+    const boundedIndex = Math.max(0, Math.min(index, qaQuestionList.length - 1));
+    questionPreviewIndex = boundedIndex;
+    const item = qaQuestionList[boundedIndex];
+    const answeredText = item.is_answered ? '已回答' : '待回答';
+    const typeText = getQuestionLabel(item.question_type, item.category);
+
+    if (metaEl) {
+        metaEl.textContent = `第 ${boundedIndex + 1}/${qaQuestionList.length} 题 · [${typeText}] · ${answeredText}`;
+    }
+    if (textEl) {
+        textEl.textContent = item.question || '（题目内容为空）';
+    }
+    if (prevBtn) prevBtn.disabled = boundedIndex === 0;
+    if (nextBtn) nextBtn.disabled = boundedIndex >= qaQuestionList.length - 1;
+}
+
+function syncQuestionNavigator(list, preferredIndex = null) {
+    qaQuestionList = normalizeQaList(list);
+    if (!qaQuestionList.length) {
+        setQuestionPreview(-1);
+        return;
+    }
+
+    if (preferredIndex !== null && preferredIndex !== undefined) {
+        setQuestionPreview(preferredIndex);
+        return;
+    }
+
+    if (questionPreviewIndex >= 0 && questionPreviewIndex < qaQuestionList.length) {
+        setQuestionPreview(questionPreviewIndex);
+        return;
+    }
+
+    setQuestionPreview(0);
+}
+
+function setQuestionPreviewByQaId(qaId) {
+    if (!qaId || !qaQuestionList.length) return;
+    const targetIndex = qaQuestionList.findIndex((item) => item.qa_id === qaId);
+    if (targetIndex >= 0) {
+        setQuestionPreview(targetIndex);
+    }
+}
+
+async function refreshSessionStatus() {
+    try {
+        const response = await fetch(`/api/v1/session/${SESSION_ID}/status`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.success && data.data) {
+            updateSessionStatus(data.data.status, data.data.status_display);
+        }
+    } catch (error) {
+        console.warn('刷新会话状态失败:', error);
+    }
+}
+
+async function refreshQAStats() {
+    try {
+        const response = await fetch(`/api/v1/session/${SESSION_ID}/qa`);
+        const data = await response.json();
+        if (!data.success || !data.data) return;
+
+        const total = data.data.questions_count || 0;
+        const answered = data.data.answered_count || 0;
+        hasQuestions = total > 0;
+        updateProgressText(answered, total);
+        syncQuestionNavigator(data.data.qa_list || []);
+        if (hasQuestions && !isGeneratingQuestions) {
+            setQuestionGenerationState('ready');
+        }
+    } catch (error) {
+        console.warn('刷新问答统计失败:', error);
+    }
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch(`/api/v1/session/${SESSION_ID}/qa`);
+        const data = await response.json();
+        if (!data.success || !data.data) return;
+
+        const list = data.data.qa_list || [];
+        syncQuestionNavigator(list);
+        if (list.length === 0) return;
+
+        const answeredList = list.filter((item) => item.is_answered);
+        if (answeredList.length > 0) {
+            addMessage('ai', `已恢复历史作答 ${answeredList.length} 条。`);
+        }
+
+        answeredList.forEach((item) => {
+            const typeLabel = getQuestionLabel(item.question_type, item.category);
+            addQuestionMessage(
+                {
+                    qa_id: item.qa_id,
+                    question_type: item.question_type,
+                    category: item.category,
+                },
+                `[${typeLabel}] ${item.question_index + 1}: ${item.question}`
+            );
+            addMessage('user', item.answer || '（空回答）');
+        });
+
+        currentQuestionData = null;
+        setInputEnabled(false);
+        if (answeredList.length > 0) {
+            const lastAnswered = answeredList[answeredList.length - 1];
+            lastRenderedQaId = lastAnswered.qa_id;
+            setQuestionPreview(lastAnswered.question_index || 0);
+        } else {
+            lastRenderedQaId = null;
+            setQuestionPreview(0);
+        }
+    } catch (error) {
+        console.warn('加载历史问答失败:', error);
+    }
+}
+
+async function loadCurrentQuestion() {
+    try {
+        const response = await fetch(`/api/v1/get_current_question/${SESSION_ID}`);
+        const data = await response.json();
+
+        if (!data.success) {
+            showToast('error', data.message || '获取当前问题失败');
+            return;
+        }
+
+        const questionData = data.data && data.data.question_data;
+        if (!questionData) {
+            currentQuestionData = null;
+            setInputEnabled(false);
+            const completionReady = await confirmSessionCompletion();
+            await refreshSessionStatus();
+            await refreshQAStats();
+            if (qaQuestionList.length > 0) {
+                setQuestionPreview(qaQuestionList.length - 1);
+            }
+            if (completionReady) {
+                await refreshReportAvailability();
+                renderCompletionActions();
+            } else {
+                showToast('warning', '问答分析文件尚未就绪，请稍后重试。');
+            }
+            return;
+        }
+
+        currentQuestionData = questionData;
+        removeCompletionActions();
+        setInputEnabled(true);
+        document.getElementById('messageInput').placeholder = `请回答第 ${questionData.question_number} 题...`;
+        setQuestionPreviewByQaId(questionData.qa_id);
+        if (questionPreviewIndex < 0) {
+            setQuestionPreview((questionData.question_number || 1) - 1);
+        }
+
+        if (lastRenderedQaId !== questionData.qa_id) {
+            lastRenderedQaId = questionData.qa_id;
+            const typeLabel = getQuestionLabel(questionData.question_type, questionData.category);
+            addQuestionMessage(
+                questionData,
+                `[${typeLabel}] ${questionData.question_number}/${questionData.total_questions}: ${questionData.question}`
+            );
+        }
+    } catch (error) {
+        console.warn('加载当前问题失败:', error);
+    }
+}
+
 function handleKeyPress(event) {
     if (event.key === 'Enter') {
         sendMessage();
     }
 }
 
-// 发送消息（处理用户回答）
-function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const message = input.value.trim();
-
-    if (message && currentQuestionData) {
-        // 添加用户消息到聊天区域
-        addMessage('user', message);
-        input.value = '';
-
-        // 保存回答到后端
-        saveAnswer(currentQuestionData.qa_id, message);
-    } else if (message && !currentQuestionData) {
-        // 没有当前问题时的普通聊天
-        addMessage('user', message);
-        input.value = '';
-
-        // 模拟AI回复
-        setTimeout(() => {
-            addMessage('ai', '感谢您的回答。如果您准备好了，可以点击"生成面试题"开始面试。');
-        }, 1000);
-    }
-}
-
-// 添加消息到聊天区域
-function addMessage(type, content) {
-    const chatMessages = document.getElementById('chatMessages');
-    const messageTime = new Date().toLocaleString('zh-CN');
-    
-    const messageHTML = `
-        <div class="message ${type}">
-            <div class="message-avatar">
-                <i class="fas fa-${type === 'user' ? 'user' : 'robot'}"></i>
-            </div>
-            <div class="message-content">
-                <div>${content}</div>
-                <div class="message-time">${messageTime}</div>
-            </div>
-        </div>
-    `;
-    
-    chatMessages.insertAdjacentHTML('beforeend', messageHTML);
-    scrollToBottom();
-}
-
-// 生成面试题
 async function generateQuestions() {
-    const headerButton = document.querySelector('.chat-header button');
-    let originalContent = '';
-    if (headerButton) {
-        originalContent = headerButton.innerHTML;
-    }
+    isGeneratingQuestions = true;
+    setQuestionGenerationState('generating');
+
+    document.getElementById('typingIndicator').style.display = 'flex';
+    scrollToBottom();
 
     try {
-        // 先检查是否有简历数据
-        const resumeCheckResponse = await fetch(`/api/v1/rooms/${ROOM_ID}/resume`);
-        const resumeCheck = await resumeCheckResponse.json();
+        const response = await fetch(`/api/v1/generate_questions/${SESSION_ID}`, { method: 'POST' });
+        const data = await response.json();
 
-        if (!resumeCheck.success || !resumeCheck.data || !resumeCheck.data.resume) {
-            YeyingInterviewer.showToast('warning', '请先上传简历！');
-            addMessage('ai', '抱歉，系统中还没有简历数据。请先前往<a href="/" style="color: #007bff; text-decoration: underline;">首页</a>上传简历，然后再生成面试题。');
+        if (!data.success) {
+            showToast('error', data.message || '生成题目失败');
             return;
         }
 
-        if (headerButton) {
-            headerButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>生成中...';
-            headerButton.disabled = true;
-        }
-        document.getElementById('typingIndicator').style.display = 'flex';
-        scrollToBottom();
-
-        // 立即更新UI为"出题中"状态（乐观更新）
-        const nextRound = await getCurrentRoundCount() + 1;
-        updateSessionStatus('generating', `第${nextRound}轮出题中`);
-        console.log('🚀 立即显示"出题中"状态');
-
-        // 发送请求
-        const response = await fetch(`/api/v1/generate_questions/${SESSION_ID}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        document.getElementById('typingIndicator').style.display = 'none';
-
-        if (data.success && data.data) {
-            // 解构嵌套的数据
-            const result = data.data;
-            currentRoundId = result.round_id;
-
-            const roundHeader = `
-                <div class="round-header" data-round-id="${result.round_id}">
-                    <span>第${result.round_index + 1}轮面试题</span>
-                </div>
-            `;
-            document.getElementById('chatMessages').insertAdjacentHTML('beforeend', roundHeader);
-
-            addMessage('ai', `好的！我为您准备了${result.questions.length}道面试题。让我们逐一进行，请仔细回答每一道题目。`);
-            YeyingInterviewer.showToast('success', `成功生成${result.questions.length}道面试题`);
-
-            // 再次刷新会话状态显示（现在应该是 interviewing）
-            await refreshSessionStatus();
-
-            await loadCurrentQuestion();
+        const count = data.data?.question_count || data.data?.questions?.length || 0;
+        const alreadyGenerated = !!data.data?.already_generated;
+        hasQuestions = true;
+        if (alreadyGenerated) {
+            addMessage('ai', `已加载本会话已生成的 ${count} 道题目。`);
+            setQuestionGenerationState('ready', `题目已就绪（${count} 题）`);
+            showToast('success', '题目已就绪');
         } else {
-            YeyingInterviewer.showToast('error', data.error || data.message || '生成面试题失败');
+            addMessage('ai', `已生成 ${count} 道题目，我们开始吧。`);
+            setQuestionGenerationState('ready', `出题完成：${MAIN_STRATEGY_TEXT}，共 ${count} 题`);
+            showToast('success', '生成成功');
         }
 
+        await refreshSessionStatus();
+        await refreshQAStats();
+        await loadCurrentQuestion();
     } catch (error) {
-        console.error('生成面试题失败:', error);
-        YeyingInterviewer.showToast('error', '网络请求失败，请稍后再试');
-        document.getElementById('typingIndicator').style.display = 'none';
+        showToast('error', '生成题目失败');
+        hasQuestions = false;
+        setQuestionGenerationState('failed');
     } finally {
-        if (headerButton && originalContent) {
-            headerButton.innerHTML = originalContent;
-            headerButton.disabled = false;
-        }
+        isGeneratingQuestions = false;
+        document.getElementById('typingIndicator').style.display = 'none';
+        setQuestionGenerationState(
+            hasQuestions ? 'ready' : 'failed',
+            hasQuestions ? '' : '自动出题失败，请点击“重试出题”。',
+            !hasQuestions
+        );
     }
 }
 
-// 加载当前问题
-async function loadCurrentQuestion() {
-    if (!currentRoundId) return;
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const message = input.value.trim();
 
-    try {
-        const response = await fetch(`/api/v1/get_current_question/${currentRoundId}`);
-        const data = await response.json();
-
-        if (data.success && data.data && data.data.question_data) {
-            currentQuestionData = data.data.question_data;
-
-            const questionHTML = `
-                <div class="current-question-info mb-2">
-                    <small class="text-muted">【${data.data.question_data.category}】问题 ${data.data.question_data.question_number}/${data.data.question_data.total_questions}</small>
-                </div>
-                <div class="question-text">${data.data.question_data.question}</div>
-                <div class="mt-2">
-                    <small class="text-info">请在下方输入框中回答这个问题...</small>
-                </div>
-            `;
-
-            addMessage('ai', questionHTML);
-
-            const input = document.getElementById('messageInput');
-            input.placeholder = `请回答第${data.data.question_data.question_number}题...`;
-            input.focus();
-
-        } else {
-            currentQuestionData = null;
-            addMessage('ai', '🎉 恭喜！您已经完成了本轮所有面试题。您可以生成新的一轮面试题继续练习。');
-
-            const input = document.getElementById('messageInput');
-            input.placeholder = '您可以回答面试题或请求生成新的题目...';
-        }
-
-    } catch (error) {
-        console.error('加载问题失败:', error);
-        YeyingInterviewer.showToast('error', '加载问题失败');
+    if (isSubmittingAnswer) {
+        return;
     }
-}
 
-// 保存用户回答
-async function saveAnswer(qaId, answerText) {
+    if (!message) {
+        showToast('warning', '请输入回答内容');
+        return;
+    }
+
+    if (!currentQuestionData) {
+        showToast('warning', '当前没有待回答的问题');
+        return;
+    }
+
+    const pendingMessage = message;
+    isSubmittingAnswer = true;
+    if (sendBtn) {
+        sendBtn.disabled = true;
+    }
+
     try {
         const response = await fetch('/api/v1/save_answer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ qa_id: qaId, answer_text: answerText })
+            body: JSON.stringify({
+                qa_id: currentQuestionData.qa_id,
+                answer_text: pendingMessage,
+            }),
         });
-
         const data = await response.json();
 
-        if (data.success) {
-            const saveData = data.data || {};
-            setTimeout(() => {
-                if (saveData.is_round_completed) {
-                    addMessage('ai', '✅ 回答已保存！🎉 您已完成本轮所有面试题，表现出色！');
-                    currentQuestionData = null;
-
-                    const input = document.getElementById('messageInput');
-                    input.placeholder = '您可以回答面试题或请求生成新的题目...';
-
-                    // 🆕 动态显示报告生成按钮
-                    showReportButtons();
-                } else {
-                    addMessage('ai', `✅ 回答已保存！还有 ${saveData.remaining_questions} 道题，让我们继续下一题。`);
-                    setTimeout(() => loadCurrentQuestion(), 1000);
-                }
-            }, 500);
-
-        } else {
-            YeyingInterviewer.showToast('error', data.error || '保存回答失败');
-        }
-
-    } catch (error) {
-        console.error('保存回答失败:', error);
-        YeyingInterviewer.showToast('error', '保存回答失败');
-    }
-}
-
-// 页面卸载时的清理
-$(window).on('beforeunload', function() {
-    console.log('面试会话页面即将卸载');
-});
-
-// ==================== 报告相关函数 ====================
-
-// 动态显示报告按钮（当用户完成所有问题后调用）
-function showReportButtons() {
-    console.log('🔍 showReportButtons 被调用');
-    console.log('currentRoundId:', currentRoundId);
-
-    // 获取当前轮次的 round_id
-    if (!currentRoundId) {
-        console.log('❌ currentRoundId 为空，退出');
-        return;
-    }
-
-    // 查找当前轮次对应的 round-header
-    const roundHeaders = document.querySelectorAll('.round-header');
-    console.log('找到的轮次头部数量:', roundHeaders.length);
-
-    if (roundHeaders.length === 0) {
-        console.log('❌ 未找到轮次头部');
-        return;
-    }
-
-    // 找到当前轮次的 header
-    let currentRoundHeader = null;
-    for (let header of roundHeaders) {
-        if (header.dataset.roundId === currentRoundId) {
-            currentRoundHeader = header;
-            console.log('✅ 找到当前轮次头部');
-            break;
-        }
-    }
-
-    if (!currentRoundHeader) {
-        console.log('❌ 未找到匹配的轮次头部');
-        return;
-    }
-
-    // 从轮次头部文本中提取轮次索引
-    const roundText = currentRoundHeader.textContent.trim();
-    const roundMatch = roundText.match(/第(\d+)轮/);
-    let roundIndex = roundMatch ? parseInt(roundMatch[1]) - 1 : 0;
-    console.log('轮次索引:', roundIndex, '轮次文本:', roundText);
-
-    // 创建报告按钮HTML
-    const reportButtonsHTML = `
-        <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-light" onclick="generateRoundReport('${SESSION_ID}', ${roundIndex})" title="生成第${roundIndex + 1}轮报告">
-                <i class="fas fa-magic me-1"></i>生成报告
-            </button>
-            <button class="btn btn-sm btn-light" onclick="viewRoundReport('${SESSION_ID}', ${roundIndex})" style="display: none;" id="viewReportBtn_${roundIndex}" title="查看报告">
-                <i class="fas fa-eye me-1"></i>查看报告
-            </button>
-            <button class="btn btn-sm btn-light" onclick="downloadRoundReport('${SESSION_ID}', ${roundIndex})" style="display: none;" id="downloadReportBtn_${roundIndex}" title="下载PDF">
-                <i class="fas fa-download me-1"></i>下载PDF
-            </button>
-        </div>
-    `;
-
-    // 添加到头部按钮容器
-    const container = document.getElementById('reportButtonsContainer');
-    if (container) {
-        console.log('✅ 正在添加报告按钮到头部...');
-        container.innerHTML = reportButtonsHTML;
-        YeyingInterviewer.showToast('success', '您现在可以生成本轮面试报告了！');
-        console.log('✅ 报告按钮添加成功！');
-    } else {
-        console.log('❌ 未找到 reportButtonsContainer 元素');
-    }
-}
-
-// 生成轮次报告
-async function generateRoundReport(sessionId, roundIndex) {
-    try {
-        // 显示进度模态框
-        showReportGeneratingModal();
-
-        // 立即更新UI为"分析中"状态（乐观更新）
-        updateSessionStatus('analyzing', `第${roundIndex + 1}轮分析中`);
-        console.log('🚀 立即显示"分析中"状态');
-
-        // 发送请求
-        const response = await fetch(`/api/v1/generate_report/${sessionId}/${roundIndex}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        const data = await response.json();
-
-        // 隐藏进度模态框
-        hideReportGeneratingModal();
-
-        if (data.success) {
-            YeyingInterviewer.showToast('success', '面试报告生成成功！');
-
-            // 显示查看和下载按钮
-            const viewBtn = document.getElementById(`viewReportBtn_${roundIndex}`);
-            const downloadBtn = document.getElementById(`downloadReportBtn_${roundIndex}`);
-
-            if (viewBtn) viewBtn.style.display = 'inline-block';
-            if (downloadBtn) downloadBtn.style.display = 'inline-block';
-
-            // 在聊天中添加成功消息
-            addMessage('ai', `📊 第${roundIndex + 1}轮面试报告生成完成！您可以点击下方按钮查看或下载报告。`);
-
-            // 再次刷新会话状态显示（现在应该是 round_completed）
-            await refreshSessionStatus();
-
-        } else {
-            YeyingInterviewer.showToast('error', data.error || data.message || '生成报告失败');
-        }
-
-    } catch (error) {
-        hideReportGeneratingModal();
-        console.error('生成报告失败:', error);
-        YeyingInterviewer.showToast('error', '网络请求失败，请稍后再试');
-    }
-}
-
-// 显示报告生成进度模态框
-function showReportGeneratingModal() {
-    const modal = document.getElementById('reportProgressModal');
-    if (!modal) {
-        // 创建模态框
-        const modalHTML = `
-            <div class="modal fade" id="reportProgressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-body text-center py-5">
-                            <div class="mb-4">
-                                <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            </div>
-                            <h5 class="fw-bold mb-3">正在生成面试报告...</h5>
-                            <p class="text-muted mb-4">AI正在分析您的面试表现，请稍候</p>
-
-                            <!-- 进度步骤 -->
-                            <div class="progress-steps text-start" style="max-width: 400px; margin: 0 auto;">
-                                <div class="step mb-3 pb-3" style="border-bottom: 1px solid #e2e8f0;" id="report-step-analyze">
-                                    <div class="d-flex align-items-center">
-                                        <div class="spinner-grow spinner-grow-sm me-3 text-primary"></div>
-                                        <span>分析面试问答</span>
-                                    </div>
-                                </div>
-                                <div class="step mb-3 pb-3" style="border-bottom: 1px solid #e2e8f0; opacity: 0.5;" id="report-step-evaluate">
-                                    <div class="d-flex align-items-center">
-                                        <div class="spinner-grow spinner-grow-sm me-3 text-primary"></div>
-                                        <span>评估回答质量</span>
-                                    </div>
-                                </div>
-                                <div class="step mb-3 pb-3" style="border-bottom: 1px solid #e2e8f0; opacity: 0.5;" id="report-step-generate">
-                                    <div class="d-flex align-items-center">
-                                        <div class="spinner-grow spinner-grow-sm me-3 text-primary"></div>
-                                        <span>生成评价报告</span>
-                                    </div>
-                                </div>
-                                <div class="step" style="opacity: 0.5;" id="report-step-pdf">
-                                    <div class="d-flex align-items-center">
-                                        <div class="spinner-grow spinner-grow-sm me-3 text-primary"></div>
-                                        <span>生成PDF文档</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <p class="text-muted mt-4 mb-0" style="font-size: 0.875rem;">
-                                <i class="fas fa-clock me-1"></i>
-                                预计需要 20-40 秒，请勿关闭页面
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-        // 启动进度动画
-        setTimeout(() => updateReportStep('report-step-evaluate'), 5000);
-        setTimeout(() => updateReportStep('report-step-generate'), 10000);
-        setTimeout(() => updateReportStep('report-step-pdf'), 15000);
-    }
-
-    const modalInstance = new bootstrap.Modal(document.getElementById('reportProgressModal'));
-    modalInstance.show();
-}
-
-// 隐藏报告生成进度模态框
-function hideReportGeneratingModal() {
-    const modal = document.getElementById('reportProgressModal');
-    if (modal) {
-        const modalInstance = bootstrap.Modal.getInstance(modal);
-        if (modalInstance) {
-            modalInstance.hide();
-        }
-        // 重置进度步骤
-        resetReportSteps();
-    }
-}
-
-// 更新报告生成步骤
-function updateReportStep(stepId) {
-    const prevSteps = {
-        'report-step-evaluate': 'report-step-analyze',
-        'report-step-generate': 'report-step-evaluate',
-        'report-step-pdf': 'report-step-generate'
-    };
-
-    if (prevSteps[stepId]) {
-        const prevStep = document.getElementById(prevSteps[stepId]);
-        if (prevStep) {
-            const spinner = prevStep.querySelector('.spinner-grow');
-            if (spinner) {
-                spinner.outerHTML = '<i class="fas fa-check-circle text-success me-3"></i>';
-            }
-        }
-    }
-
-    const currentStep = document.getElementById(stepId);
-    if (currentStep) {
-        currentStep.style.opacity = '1';
-    }
-}
-
-// 重置报告生成步骤
-function resetReportSteps() {
-    setTimeout(() => {
-        const steps = ['report-step-analyze', 'report-step-evaluate', 'report-step-generate', 'report-step-pdf'];
-        steps.forEach((stepId, index) => {
-            const step = document.getElementById(stepId);
-            if (step) {
-                step.style.opacity = index === 0 ? '1' : '0.5';
-                const icon = step.querySelector('i.fa-check-circle');
-                if (icon) {
-                    icon.outerHTML = '<div class="spinner-grow spinner-grow-sm me-3 text-primary"></div>';
-                }
-            }
-        });
-    }, 500);
-}
-
-// 查看轮次报告
-async function viewRoundReport(sessionId, roundIndex) {
-    try {
-        const response = await fetch(`/api/v1/reports/${sessionId}/${roundIndex}`);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.success && data.data && data.data.evaluation_data) {
-            // 显示报告详情模态框
-            showReportModal(data.data.evaluation_data);
-        } else {
-            YeyingInterviewer.showToast('error', data.error || data.message || '获取报告失败');
-        }
-
-    } catch (error) {
-        console.error('获取报告失败:', error);
-        YeyingInterviewer.showToast('error', '网络请求失败');
-    }
-}
-
-// 下载轮次报告PDF
-async function downloadRoundReport(sessionId, roundIndex) {
-    try {
-        const downloadUrl = `/api/v1/reports/download/${sessionId}/${roundIndex}`;
-
-        // 创建一个临时的下载链接
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `interview_report_${sessionId}_${roundIndex}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        YeyingInterviewer.showToast('success', 'PDF报告下载开始');
-
-    } catch (error) {
-        console.error('下载报告失败:', error);
-        YeyingInterviewer.showToast('error', '下载失败');
-    }
-}
-
-// 显示报告详情模态框
-function showReportModal(reportData) {
-    if (!reportData) {
-        YeyingInterviewer.showToast('error', '报告数据无效');
-        return;
-    }
-
-    const header = reportData.report_header || {};
-    const interviewerComment = reportData.interviewer_comment || {};
-    const comprehensiveAnalysis = reportData.comprehensive_analysis || {};
-    const sessionInfo = reportData.session_info || {};
-
-    const modalHTML = `
-        <div class="modal fade" id="reportModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="fas fa-file-alt me-2"></i>${header.report_title || '面试报告'}
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- 报告头部信息 -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-body text-center">
-                                        <h2 class="text-primary mb-1">${header.overall_grade || 'N/A'}</h2>
-                                        <p class="text-muted mb-0">综合等级</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-body text-center">
-                                        <h2 class="text-success mb-1">${header.total_score !== undefined ? header.total_score + '分' : 'N/A'}</h2>
-                                        <p class="text-muted mb-0">综合得分</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 面试官评价 -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>面试官点评</h6>
-                            </div>
-                            <div class="card-body">
-                                <p><strong>总体评价：</strong></p>
-                                <p class="text-muted">${interviewerComment.summary || '暂无评价'}</p>
-                                <p><strong>改进建议：</strong></p>
-                                <p class="text-muted">${interviewerComment.suggestions || '暂无建议'}</p>
-                            </div>
-                        </div>
-
-                        <!-- 综合分析 -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>综合分析</h6>
-                            </div>
-                            <div class="card-body">
-                                ${Object.entries(comprehensiveAnalysis).map(([key, item]) => `
-                                    <div class="row mb-2">
-                                        <div class="col-4">${getAnalysisLabel(key)}:</div>
-                                        <div class="col-2">
-                                            <span class="badge bg-${getScoreBadgeColor(item.score || 0)}">${item.score || 0}分</span>
-                                        </div>
-                                        <div class="col-6 text-muted small">${item.comment || ''}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                        <button type="button" class="btn btn-primary" onclick="downloadRoundReport('${sessionInfo.session_id || SESSION_ID}', ${sessionInfo.round_index !== undefined ? sessionInfo.round_index : 0})">
-                            <i class="fas fa-download me-1"></i>下载PDF
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // 移除已存在的模态框
-    const existingModal = document.getElementById('reportModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-
-    // 添加新的模态框
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-    // 显示模态框
-    const modal = new bootstrap.Modal(document.getElementById('reportModal'));
-    modal.show();
-}
-
-// 获取分析项目标签
-function getAnalysisLabel(key) {
-    const labels = {
-        'content_completeness': '内容完整度',
-        'highlight_prominence': '亮点突出度',
-        'logical_clarity': '逻辑清晰度',
-        'expression_ability': '表达能力',
-        'position_matching': '岗位契合度'
-    };
-    return labels[key] || key;
-}
-
-// 获取分数对应的badge颜色
-function getScoreBadgeColor(score) {
-    if (score >= 8) return 'success';
-    if (score >= 6) return 'warning';
-    return 'danger';
-}
-
-// 检查已有报告状态
-async function checkExistingReports() {
-    try {
-        const response = await fetch(`/api/v1/reports/list/${SESSION_ID}`);
-
-        if (!response.ok) {
-            console.warn(`Failed to fetch reports list: HTTP ${response.status}`);
+        if (!data.success) {
+            showToast('error', data.message || '保存回答失败');
+            input.value = pendingMessage;
             return;
         }
 
-        const data = await response.json();
+        addMessage('user', pendingMessage);
+        input.value = '';
+        await refreshQAStats();
 
-        if (data.success && data.data && data.data.reports) {
-            data.data.reports.forEach(report => {
-                if (report.evaluation_exists || report.pdf_exists) {
-                    const viewBtn = document.getElementById(`viewReportBtn_${report.round_index}`);
-                    const downloadBtn = document.getElementById(`downloadReportBtn_${report.round_index}`);
-
-                    if (viewBtn && report.evaluation_exists) {
-                        viewBtn.style.display = 'inline-block';
-                    }
-                    if (downloadBtn && report.pdf_exists) {
-                        downloadBtn.style.display = 'inline-block';
-                    }
-                }
-            });
-        } else if (!data.success) {
-            console.warn('Failed to load existing reports:', data.error || data.message);
+        if (data.data?.is_session_completed) {
+            currentQuestionData = null;
+            setInputEnabled(false);
+            const completionReady = await confirmSessionCompletion();
+            await refreshSessionStatus();
+            if (completionReady && data.data?.qa_analysis_ready !== false) {
+                await refreshReportAvailability();
+                renderCompletionActions();
+            } else {
+                showToast('warning', '问答分析文件尚未就绪，请稍后重试。');
+            }
+        } else {
+            await loadCurrentQuestion();
         }
     } catch (error) {
-        console.error('检查报告状态失败:', error);
+        showToast('error', '保存回答失败');
+        input.value = pendingMessage;
+    } finally {
+        isSubmittingAnswer = false;
+        if (sendBtn && currentQuestionData) {
+            sendBtn.disabled = false;
+        }
     }
 }
 
-// 页面加载完成后的初始化
-document.addEventListener('DOMContentLoaded', function() {
-    // 设置初始状态class
-    const initialStatus = '{{ session.status }}';
-    const initialStatusDisplay = '{{ session.status_display }}';
-    updateSessionStatus(initialStatus, initialStatusDisplay);
+async function confirmSessionCompletion() {
+    try {
+        const response = await fetch(`/api/v1/qa_completion/${SESSION_ID}`, { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            showToast('warning', data.message || '会话完成确认失败，报告数据可能尚未准备好');
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.warn('会话完成确认失败:', error);
+        showToast('warning', '会话完成确认失败，报告数据可能尚未准备好');
+        return false;
+    }
+}
 
-    // 异步刷新最新状态（因为页面渲染时状态可能已经改变）
-    refreshSessionStatus();
+async function refreshReportAvailability() {
+    try {
+        const response = await fetch(`/api/v1/reports/list/${SESSION_ID}`);
+        const data = await response.json();
+        if (!response.ok || !data.success || !data.data) {
+            reportAvailable = false;
+            evaluationAvailable = false;
+            pdfAvailable = false;
+            return;
+        }
+        reportAvailable = !!data.data.report_available;
+        evaluationAvailable = !!data.data.evaluation_exists;
+        pdfAvailable = !!data.data.pdf_exists;
+    } catch (error) {
+        reportAvailable = false;
+        evaluationAvailable = false;
+        pdfAvailable = false;
+    }
+}
+
+async function generateReport() {
+    if (isGeneratingReport) {
+        return;
+    }
+    if (reportAvailable) {
+        showToast('info', '报告已生成，无需重复生成');
+        return;
+    }
+
+    const btn = document.getElementById('generateReportBtn');
+    isGeneratingReport = true;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>生成中...';
+    }
+    startReportGenerationProgress();
+
+    try {
+        const response = await fetch(`/api/v1/generate_report/${SESSION_ID}`, { method: 'POST' });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            if (response.status === 409 || data.code === 409) {
+                showToast('info', data.message || '报告已存在，无需重复生成');
+                await refreshReportAvailability();
+                renderCompletionActions();
+                return;
+            }
+            showToast('error', data.message || '生成报告失败');
+            return;
+        }
+
+        showToast('success', '报告生成成功');
+        await refreshSessionStatus();
+        await refreshReportAvailability();
+        renderCompletionActions();
+    } catch (error) {
+        showToast('error', '生成报告失败');
+    } finally {
+        isGeneratingReport = false;
+        stopReportGenerationProgress();
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-magic me-1"></i>生成报告';
+        }
+    }
+}
+
+async function viewReport() {
+    try {
+        const response = await fetch(`/api/v1/reports/${SESSION_ID}`);
+        const data = await response.json();
+        if (!response.ok || !data.success || !data.data?.evaluation_data) {
+            showToast('warning', data.message || '报告尚未生成');
+            return;
+        }
+        document.getElementById('reportPreview').innerHTML = renderReportView(data.data.evaluation_data);
+        if (reportModal) {
+            reportModal.show();
+        }
+    } catch (error) {
+        showToast('error', '加载报告失败');
+    }
+}
+
+function downloadReport() {
+    window.open(`/api/v1/reports/download/${SESSION_ID}`, '_blank');
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    let sessionStatusTimer = null;
+    reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
+
+    document.getElementById('retryGenerateBtn').addEventListener('click', generateQuestions);
+    document.getElementById('prevQuestionBtn').addEventListener('click', function() {
+        setQuestionPreview(questionPreviewIndex - 1);
+    });
+    document.getElementById('nextQuestionBtn').addEventListener('click', function() {
+        setQuestionPreview(questionPreviewIndex + 1);
+    });
+    document.getElementById('chatMessages').addEventListener('click', function(event) {
+        const favoriteBtn = event.target.closest('.question-favorite-btn');
+        if (favoriteBtn) {
+            toggleQuestionFavorite(favoriteBtn);
+        }
+    });
+
+    syncQuestionNavigator([]);
+    setInputEnabled(false);
+    setQuestionGenerationState(hasQuestions ? 'ready' : 'idle');
+    await refreshSessionStatus();
+    await refreshQAStats();
+    await loadHistory();
+    await refreshReportAvailability();
+
+    if (!hasQuestions) {
+        await generateQuestions();
+    } else if (!currentQuestionData && hasQuestions) {
+        await loadCurrentQuestion();
+    }
+
+    sessionStatusTimer = window.setInterval(() => {
+        refreshSessionStatus();
+    }, 4000);
+    window.addEventListener('beforeunload', () => {
+        if (sessionStatusTimer) {
+            window.clearInterval(sessionStatusTimer);
+        }
+    });
+
+    scrollToBottom();
 });
 </script>
-
-<style>
-/* 确保生成报告按钮的边框一直显示 */
-.btn-outline-primary,
-.btn-outline-success,
-.btn-outline-info {
-    border: 1px solid !important;
-}
-
-.btn-outline-primary {
-    border-color: #0d6efd !important;
-}
-
-.btn-outline-success {
-    border-color: #198754 !important;
-}
-
-.btn-outline-info {
-    border-color: #0dcaf0 !important;
-}
-</style>
 {% endblock %}

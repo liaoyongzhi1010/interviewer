@@ -30,15 +30,7 @@
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
-    --glow-blue: 0 0 30px rgba(91, 124, 250, 0.3);
-    --glow-purple: 0 0 30px rgba(139, 92, 246, 0.3);
 
-    /* 旧的Bootstrap变量兼容 */
-    --primary-color: #667eea;
-    --success-color: #10b981;
-    --info-color: #5b7cfa;
-    --warning-color: #fbbf24;
-    --danger-color: #ef4444;
 }
 
 /* ==================== 全局样式 ==================== */
@@ -376,26 +368,6 @@ main {
     color: var(--text-muted);
 }
 
-/* ==================== 聊天界面 ==================== */
-.chat-container {
-    height: calc(100vh - 200px);
-    background: var(--bg-glass);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-md);
-    display: flex;
-    flex-direction: column;
-}
-
-.chat-header {
-    background: var(--gradient-primary);
-    color: white;
-    padding: 1.5rem;
-    border-radius: 20px 20px 0 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 .chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -492,80 +464,6 @@ main {
     border-radius: 0 0 20px 20px;
 }
 
-/* ==================== 问题列表 ==================== */
-.questions-list {
-    list-style: none;
-    padding: 0;
-}
-
-.questions-list li {
-    background: var(--bg-secondary);
-    backdrop-filter: blur(10px);
-    margin-bottom: 0.875rem;
-    padding: 1.25rem;
-    border-radius: 12px;
-    border-left: 3px solid var(--accent-blue);
-    box-shadow: var(--shadow-sm);
-    transition: all 0.3s ease;
-}
-
-.questions-list li:hover {
-    transform: translateX(8px);
-    box-shadow: var(--shadow-md);
-    border-left-color: var(--accent-purple);
-    background: rgba(0, 0, 0, 0.02);
-}
-
-.question-number {
-    font-weight: bold;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-right: 0.5rem;
-}
-
-/* ==================== 问题卡片 ==================== */
-.question-card {
-    background: var(--gradient-primary);
-    color: white;
-    border-radius: 16px;
-    padding: 1.75rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
-    position: relative;
-    overflow: hidden;
-}
-
-.question-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-    pointer-events: none;
-}
-
-.question-card .question-text {
-    font-size: 1.15rem;
-    line-height: 1.7;
-    margin-bottom: 0.75rem;
-    position: relative;
-}
-
-/* ==================== 加载动画 ==================== */
-.loading {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(0, 0, 0, 0.1);
-    border-radius: 50%;
-    border-top-color: var(--accent-blue);
-    animation: spin 0.8s linear infinite;
-}
-
 .typing-indicator {
     display: flex;
     align-items: center;
@@ -587,63 +485,6 @@ main {
 
 .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
 .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
-
-/* ==================== 轮次标识 ==================== */
-.round-header {
-    text-align: center;
-    margin: 2.5rem 0 1.5rem;
-    position: relative;
-}
-
-.round-header::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--border-color) 20%, var(--border-color) 80%, transparent);
-    z-index: 1;
-}
-
-.round-header span {
-    background: var(--bg-secondary);
-    padding: 0.75rem 1.5rem;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    font-weight: 600;
-    border-radius: 25px;
-    position: relative;
-    z-index: 2;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-}
-
-/* ==================== 统计卡片 ==================== */
-.stats-card {
-    background: var(--bg-glass);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.3s ease;
-}
-
-.stats-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: rgba(0, 212, 255, 0.4);
-}
-
-.stats-card i {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
 
 /* ==================== 徽章 ==================== */
 .badge {
@@ -698,10 +539,6 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
 @keyframes typing {
     0%, 60%, 100% { transform: translateY(0); }
     30% { transform: translateY(-12px); }
@@ -718,11 +555,6 @@ h1, h2, h3, h4, h5, h6 {
         max-width: 85%;
     }
 
-    .chat-container {
-        height: calc(100vh - 150px);
-        border-radius: 16px;
-    }
-
     .message-avatar {
         width: 36px;
         height: 36px;
@@ -735,25 +567,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ==================== 工具类 ==================== */
-.glass {
-    background: var(--bg-glass);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border-color);
-}
-
 .gradient-text {
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-}
-
-.glow {
-    box-shadow: var(--glow-blue);
-}
-
-.shadow-neon {
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
 }
 
 /* ==================== Modal修复 ==================== */
@@ -774,13 +592,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ==================== 上传交互统一样式 ==================== */
-.upload-modal .modal-dialog,
-.upload-progress-modal .modal-dialog {
+.upload-modal .modal-dialog {
     max-width: 560px;
 }
 
-.upload-modal .modal-content,
-.upload-progress-modal .modal-content {
+.upload-modal .modal-content {
     border: 1px solid rgba(91, 124, 250, 0.2);
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.96);
@@ -801,43 +617,6 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid rgba(91, 124, 250, 0.25);
     border-radius: 12px;
     color: #334155;
-}
-
-.upload-progress-modal .modal-body {
-    padding: 2.25rem 2rem;
-}
-
-.upload-progress-spinner {
-    width: 3.6rem;
-    height: 3.6rem;
-}
-
-.upload-progress-steps {
-    max-width: 420px;
-    margin: 0 auto;
-    padding: 1rem 1.1rem;
-    border-radius: 14px;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    background: rgba(248, 250, 252, 0.9);
-}
-
-.upload-progress-steps .step {
-    border-bottom: 1px solid #e2e8f0;
-    opacity: 0.5;
-    padding-bottom: 0.75rem;
-    margin-bottom: 0.75rem;
-    transition: opacity 0.25s ease;
-}
-
-.upload-progress-steps .step:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.upload-progress-footnote {
-    font-size: 0.875rem;
-    color: var(--text-muted);
 }
 
 .upload-toast {
@@ -1091,10 +870,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 576px) {
-    .upload-progress-modal .modal-body {
-        padding: 1.5rem 1rem;
-    }
-
     .upload-toast {
         top: 76px;
         min-width: auto;

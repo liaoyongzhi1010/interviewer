@@ -3,7 +3,8 @@
 from backend.models.auth import AuthChallenge
 from backend.models.base import DATABASE_PATH, Base, BaseModel, SessionLocal, db_session, engine
 from backend.models.bootstrap import init_database
-from backend.models.interview import QuestionAnswer, Room, Round, RoundCompletion, Session
+from backend.models.interview import QuestionAnswer, Room, Session
+from backend.models.mistake import MistakeItem
 from backend.models.resume import Resume
 
 __all__ = [
@@ -17,8 +18,7 @@ __all__ = [
     "Resume",
     "Room",
     "Session",
-    "Round",
     "QuestionAnswer",
-    "RoundCompletion",
+    "MistakeItem",
     "init_database",
 ]

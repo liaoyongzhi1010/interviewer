@@ -12,7 +12,7 @@ from backend.api.response import ApiResponse, ResponseCode
 from backend.api.routes import router as api_router
 from backend.common.config import config
 from backend.common.logger import get_logger
-from backend.models import init_database
+from backend.models import DATABASE_PATH, init_database
 from backend.web.routes import router as web_router
 
 logger = get_logger(__name__)
@@ -28,6 +28,7 @@ def init_app() -> None:
 
     init_database()
     logger.info("Database initialized successfully")
+    logger.info("Active database path: %s", DATABASE_PATH)
 
 
 def _is_api_like_path(path: str) -> bool:
